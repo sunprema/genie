@@ -56,6 +56,10 @@ defmodule Genie.Accounts.User do
   actions do
     defaults [:read]
 
+    update :update do
+      accept [:name, :role, :org_id]
+    end
+
     read :get_by_subject do
       description "Get a user by the subject claim in a JWT"
       argument :subject, :string, allow_nil?: false
@@ -228,6 +232,14 @@ defmodule Genie.Accounts.User do
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
       authorize_if always()
     end
+
+    policy action_type(:read) do
+      authorize_if Genie.Accounts.Checks.SameOrg
+    end
+
+    policy action_type(:update) do
+      authorize_if Genie.Accounts.Checks.IsSelf
+    end
   end
 
   attributes do
@@ -244,6 +256,27 @@ defmodule Genie.Accounts.User do
     end
 
     attribute :confirmed_at, :utc_datetime_usec
+
+    attribute :name, :string do
+      allow_nil? true
+      public? true
+    end
+
+    attribute :role, :atom do
+      constraints one_of: [:admin, :member]
+      default :member
+      allow_nil? false
+      public? true
+    end
+
+    create_timestamp :inserted_at
+  end
+
+  relationships do
+    belongs_to :org, Genie.Accounts.Organisation do
+      allow_nil? true
+      public? true
+    end
   end
 
   identities do

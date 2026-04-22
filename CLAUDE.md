@@ -1,4 +1,5 @@
 **Read references/REQUIREMENTS.md to understand this application**
+**Read references/ROADMAP.md to implement the application tasks**
 
 ## 0. IMPORTANT POINTS
 

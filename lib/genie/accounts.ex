@@ -6,7 +6,9 @@ defmodule Genie.Accounts do
   end
 
   resources do
+    resource Genie.Accounts.Organisation
     resource Genie.Accounts.Token
     resource Genie.Accounts.User
+    resource Genie.Accounts.ApiKey
   end
 end

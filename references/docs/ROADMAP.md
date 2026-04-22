@@ -39,27 +39,27 @@
 
 ### Accounts domain
 
-- [ ] Define `Genie.Accounts.Organisation` Ash resource with attributes: `id`, `name`, `slug`, `inserted_at`
-- [ ] Define `Genie.Accounts.User` Ash resource with attributes: `id`, `email`, `name`, `role`, `org_id`, `inserted_at`
-- [ ] Define `Genie.Accounts.ApiKey` Ash resource with attributes: `id`, `name`, `key_hash`, `user_id`, `expires_at`
-- [ ] Write migrations for all three resources
-- [ ] Write Ash policy: users may only read resources within their own organisation
-- [ ] Write unit tests for all policies — including cross-org rejection cases
+- [x] Define `Genie.Accounts.Organisation` Ash resource with attributes: `id`, `name`, `slug`, `inserted_at`
+- [x] Define `Genie.Accounts.User` Ash resource with attributes: `id`, `email`, `name`, `role`, `org_id`, `inserted_at`
+- [x] Define `Genie.Accounts.ApiKey` Ash resource with attributes: `id`, `name`, `key_hash`, `user_id`, `expires_at`
+- [x] Write migrations for all three resources
+- [x] Write Ash policy: users may only read resources within their own organisation
+- [x] Write unit tests for all policies — including cross-org rejection cases
 
 ### Conversation domain
 
-- [ ] Define `Genie.Conversation.Session` Ash resource with attributes: `id`, `org_id`, `user_id`, `title`, `inserted_at`, `updated_at`
-- [ ] Define `Genie.Conversation.Turn` Ash resource with attributes: `id`, `session_id`, `role` (`:user | :agent`), `content`, `inserted_at`
-- [ ] Write migration for Session and Turn
-- [ ] Define `Ash.read` action `recent_turns/2` — accepts `session_id` and `limit`, ordered by `inserted_at desc`
-- [ ] Write unit tests for `recent_turns/2`
+- [x] Define `Genie.Conversation.Session` Ash resource with attributes: `id`, `org_id`, `user_id`, `title`, `inserted_at`, `updated_at`
+- [x] Define `Genie.Conversation.Turn` Ash resource with attributes: `id`, `session_id`, `role` (`:user | :agent`), `content`, `inserted_at`
+- [x] Write migration for Session and Turn
+- [x] Define `Ash.read` action `recent_turns/2` — accepts `session_id` and `limit`, ordered by `inserted_at desc`
+- [x] Write unit tests for `recent_turns/2`
 
 ### Audit domain
 
-- [ ] Define `Genie.Audit.AuditLog` Ash resource with attributes: `id`, `session_id`, `lamp_id`, `intent_name`, `actor_id`, `trace_id`, `oban_job_id`, `result`, `inserted_at`
-- [ ] Configure `AuditLog` with append-only policy — no update or destroy actions permitted
-- [ ] Write migration for AuditLog
-- [ ] Write unit test confirming update and destroy actions are rejected at the policy layer
+- [x] Define `Genie.Audit.AuditLog` Ash resource with attributes: `id`, `session_id`, `lamp_id`, `intent_name`, `actor_id`, `trace_id`, `oban_job_id`, `result`, `inserted_at`
+- [x] Configure `AuditLog` with append-only policy — no update or destroy actions permitted
+- [x] Write migration for AuditLog
+- [x] Write unit test confirming update and destroy actions are rejected at the policy layer
 
 ---
 
@@ -446,7 +446,7 @@
 | Slice | Name                             | Status |
 | ----- | -------------------------------- | ------ |
 | 0     | Project Scaffold                 | `[ ]`  |
-| 1     | Ash Domain Foundation            | `[ ]`  |
+| 1     | Ash Domain Foundation            | `[x]`  |
 | 2     | GenieLamp XML Parser             | `[ ]`  |
 | 3     | GenieLamp Registry               | `[ ]`  |
 | 4     | GenieLamp Renderer               | `[ ]`  |
