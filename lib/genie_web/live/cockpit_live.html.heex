@@ -1,0 +1,207 @@
+<div class="cockpit-page">
+
+  <%!-- Top bar --%>
+  <div class="ck-top">
+    <div class="ck-brand">
+      <div class="ck-brand-mark"></div>
+      <div class="ck-brand-name">Genie<em> · cockpit</em></div>
+    </div>
+    <div class="ck-crumbs">
+      <span>Acme Platform</span>
+      <span class="sep">/</span>
+      <span>prod-us-east-1</span>
+      <span class="sep">/</span>
+      <span class="here">Workspace</span>
+    </div>
+    <div class="ck-top-right">
+      <button type="button" class="ck-iconbtn ghost" title="Search">
+        <svg class="ck-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+        </svg>
+        Search
+        <span class="ck-kbd">⌘K</span>
+      </button>
+      <button type="button" class="ck-iconbtn ghost" title="Audit log">
+        <svg class="ck-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/>
+        </svg>
+        Audit
+      </button>
+      <button type="button" class="ck-iconbtn ghost" title="Notifications">
+        <svg class="ck-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+      </button>
+      <div class="ck-avatar">GN</div>
+    </div>
+  </div>
+
+  <%!-- App grid --%>
+  <div class="ck-app">
+
+    <%!-- Left rail --%>
+    <aside class="ck-rail">
+      <div class="ck-rail-group">
+        <button type="button" class="ck-rail-btn active" title="Chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+        <button type="button" class="ck-rail-btn" title="Marketplace">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </button>
+        <button type="button" class="ck-rail-btn" title="Pinned">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v6M5 10h14l-2 10H7z"/>
+          </svg>
+        </button>
+        <button type="button" class="ck-rail-btn" title="Runs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-6"/>
+          </svg>
+        </button>
+      </div>
+      <div class="ck-rail-group">
+        <button type="button" class="ck-rail-btn" title="Approvals">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        </button>
+        <button type="button" class="ck-rail-btn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="ck-rail-label">Acme · prod</div>
+    </aside>
+
+    <%!-- Chat panel --%>
+    <section class="ck-chat">
+      <div class="ck-chat-head">
+        <div class="h">Workspace</div>
+        <div class="s">
+          Connected to <span style="color:var(--ink)">prod-us-east-1</span> · 12 lamps enabled
+        </div>
+      </div>
+
+      <%!-- Pinned tools --%>
+      <div class="ck-pins">
+        <button type="button" class="ck-pin s3"><span class="dot"></span>Create S3 Bucket</button>
+        <button type="button" class="ck-pin ci"><span class="dot"></span>Pipeline Status</button>
+        <button type="button" class="ck-pin pd"><span class="dot"></span>On-call Now</button>
+        <button type="button" class="ck-pin kv"><span class="dot"></span>Rotate Secret</button>
+        <button type="button" class="ck-pin"><span class="dot"></span>+ Pin a lamp</button>
+      </div>
+
+      <%!-- Message stream --%>
+      <div class="ck-stream" id="ck-stream">
+      </div>
+
+      <%!-- Composer --%>
+      <div class="ck-composer">
+        <form phx-change="update_composer">
+          <div class="ck-composer-box">
+            <textarea
+              id="ck-composer-textarea"
+              name="message"
+              rows="1"
+              placeholder="Ask Genie — describe what you need to do…"
+              phx-hook="CockpitComposer"
+            ><%= @message %></textarea>
+            <div class="ck-composer-actions">
+              <div class="left">
+                <button type="button" class="ck-mini" title="Attach">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m21 10-9 9a6 6 0 0 1-8.5-8.5l9-9A4 4 0 0 1 18 7l-8.5 8.5a2 2 0 0 1-3-3L15 4"/>
+                  </svg>
+                </button>
+                <button type="button" class="ck-mini" title="Slash commands">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m16 4-8 16"/>
+                  </svg>
+                </button>
+                <button type="button" class="ck-mini" title="Context">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="right">
+                <button type="button" class="ck-model-chip">
+                  <span class="pulse"></span>agent · orchestrator
+                </button>
+                <button
+                  type="button"
+                  class="ck-send"
+                  disabled={@message == ""}
+                >
+                  Send
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+                    <path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <%!-- Canvas --%>
+    <section class="ck-canvas">
+      <div class="ck-canvas-head">
+        <div class="tabs">
+          <button type="button" class="ck-tab active">
+            <span class="swatch"></span>
+            Canvas
+          </button>
+        </div>
+        <div class="right">
+          <div class="ck-status-pill"><span class="dot"></span>bridge · healthy</div>
+          <button type="button" class="ck-iconbtn ghost" title="Expand">
+            <svg class="ck-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6"/><path d="M9 21H3v-6"/>
+              <path d="M21 3l-7 7"/><path d="M3 21l7-7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="ck-canvas-body">
+        <div class="ck-empty">
+          <div class="em">Ask, and it's <em>done.</em></div>
+          <div class="sub">Describe a task in plain English. Genie will find the right tool and bring it here.</div>
+          <div class="hint-grid">
+            <div class="ck-hint">
+              <div class="t">Create an S3 bucket</div>
+              <div class="s">For nightly analytics exports</div>
+              <div class="k">aws · storage</div>
+            </div>
+            <div class="ck-hint">
+              <div class="t">Check a deploy</div>
+              <div class="s">Last deploy of api-gateway</div>
+              <div class="k">ci · gitlab</div>
+            </div>
+            <div class="ck-hint">
+              <div class="t">Find on-call</div>
+              <div class="s">Payments rotation</div>
+              <div class="k">pagerduty</div>
+            </div>
+            <div class="ck-hint">
+              <div class="t">Rotate a secret</div>
+              <div class="s">Stripe, prod-us-east-1</div>
+              <div class="k">vault</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>

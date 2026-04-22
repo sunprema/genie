@@ -43,6 +43,8 @@ defmodule GenieWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/cockpit", CockpitLive
+
     auth_routes AuthController, Genie.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
