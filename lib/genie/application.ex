@@ -11,11 +11,17 @@ defmodule Genie.Application do
       GenieWeb.Telemetry,
       Genie.Repo,
       {DNSCluster, query: Application.get_env(:genie, :dns_cluster_query) || :ignore},
+      {Oban,
+       AshOban.config(
+         Application.fetch_env!(:genie, :ash_domains),
+         Application.fetch_env!(:genie, Oban)
+       )},
       {Phoenix.PubSub, name: Genie.PubSub},
       # Start a worker by calling: Genie.Worker.start_link(arg)
       # {Genie.Worker, arg},
       # Start to serve requests, typically the last entry
-      GenieWeb.Endpoint
+      GenieWeb.Endpoint,
+      {AshAuthentication.Supervisor, [otp_app: :genie]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

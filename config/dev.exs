@@ -1,4 +1,5 @@
 import Config
+config :ash, policies: [show_policy_breakdowns?: true]
 
 # Configure your database
 config :genie, Genie.Repo,
@@ -6,6 +7,7 @@ config :genie, Genie.Repo,
   password: "postgres",
   hostname: "localhost",
   database: "genie_dev",
+  port: 5433,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -68,7 +70,7 @@ config :genie, GenieWeb.Endpoint,
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :genie, dev_routes: true
+config :genie, dev_routes: true, token_signing_secret: "i3Pnv8Ed1K8iImBwk07WcJiPAY883yt0"
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

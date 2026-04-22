@@ -1,0 +1,2191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AskGenie — Cockpit</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  /* cool neutral palette */
+  --paper:     #FAFAF9;
+  --surface:   #FFFFFF;
+  --surface-2: #F4F5F7;
+  --line:      #E6E8EC;
+  --line-2:    #EEF0F3;
+  --ink:       #0F172A;
+  --ink-2:     #1E293B;
+  --steel:     #475569;
+  --steel-2:   #64748B;
+  --mute:      #94A3B8;
+  --mute-2:    #CBD5E1;
+  /* single accent — steel-blue */
+  --accent:    oklch(0.56 0.13 248);
+  --accent-2:  oklch(0.92 0.04 248);
+  --accent-3:  oklch(0.97 0.02 248);
+  --ok:        oklch(0.62 0.13 155);
+  --warn:      oklch(0.70 0.14 70);
+  --danger:    oklch(0.58 0.17 25);
+
+  --radius:    12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 0 rgba(15,23,42,.02), 0 1px 2px rgba(15,23,42,.04);
+  --shadow:    0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.12);
+
+  --f-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --f-sans:    "Geist", ui-sans-serif, -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --f-mono:    "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--f-sans);
+  font-weight:400;
+  color:var(--ink);
+  background:var(--paper);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+/* ——— top chrome ——— */
+.top{
+  height:52px;
+  border-bottom:1px solid var(--line);
+  background:var(--surface);
+  display:flex;
+  align-items:center;
+  padding:0 16px;
+  gap:16px;
+  position:relative;
+  z-index:2;
+  min-width:0;
+  overflow:hidden;
+}
+.brand{ flex:none; }
+.top-right{ flex:none; }
+.brand{
+  display:flex; align-items:center; gap:10px;
+  padding-right:14px; border-right:1px solid var(--line);
+  height:100%;
+  flex:none;
+  min-width:0;
+}
+.brand-mark{
+  width:22px;height:22px;border-radius:6px;
+  background:var(--ink);
+  position:relative;
+  display:grid;place-items:center;
+}
+.brand-mark::before{
+  content:""; width:8px;height:8px;border-radius:2px;
+  background:var(--paper);
+  transform:rotate(45deg);
+}
+.brand-name{
+  font-family:var(--f-display);
+  font-size:20px; letter-spacing:-0.01em;
+  color:var(--ink);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+@media (max-width: 1100px){
+  .brand-name em{ display:none; }
+}
+.brand-name em{ font-style:italic; color:var(--steel); font-weight:400; }
+
+.crumbs{
+  display:flex; align-items:center; gap:8px;
+  color:var(--steel); font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-width:0;
+}
+.crumbs > span{ flex:none; }
+.crumbs .sep{ color:var(--mute-2); }
+.crumbs .here{ color:var(--ink); }
+
+.top-right{ margin-left:auto; display:flex; align-items:center; gap:6px; }
+.kbd{
+  font-family:var(--f-mono); font-size:11px;
+  color:var(--steel-2);
+  border:1px solid var(--line);
+  background:var(--surface-2);
+  border-radius:5px;
+  padding:2px 6px;
+}
+.iconbtn{
+  height:32px; min-width:32px; padding:0 10px;
+  display:inline-flex; align-items:center; gap:8px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:8px;
+  color:var(--steel);
+  font-family:var(--f-sans); font-size:13px;
+  cursor:pointer;
+  transition: all .15s ease;
+}
+.iconbtn:hover{ border-color:var(--mute-2); color:var(--ink); }
+.iconbtn.ghost{ border-color:transparent; background:transparent; }
+.iconbtn.ghost:hover{ background:var(--surface-2); }
+.avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,#CBD5E1,#94A3B8);
+  color:white; font-size:11px; font-weight:500;
+  display:grid;place-items:center;
+  border:1px solid var(--line);
+}
+
+/* ——— main grid ——— */
+.app{
+  display:grid;
+  grid-template-columns: 56px 420px 1fr;
+  height: calc(100vh - 52px);
+  min-height: 640px;
+}
+
+/* ——— rail ——— */
+.rail{
+  border-right:1px solid var(--line);
+  background:var(--surface);
+  display:flex; flex-direction:column;
+  align-items:center;
+  padding:14px 0 10px;
+  gap:6px;
+}
+.rail-group{ display:flex; flex-direction:column; gap:4px; align-items:center; }
+.rail-group + .rail-group{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line-2); width:36px;}
+.rail-btn{
+  width:36px;height:36px;border-radius:8px;
+  display:grid;place-items:center;
+  color:var(--steel-2);
+  cursor:pointer;
+  border:1px solid transparent;
+  position:relative;
+  background:transparent;
+}
+.rail-btn:hover{ background:var(--surface-2); color:var(--ink); }
+.rail-btn.active{ background:var(--accent-3); color:var(--accent); border-color:var(--accent-2); }
+.rail-btn svg{ width:16px;height:16px;stroke-width:1.6; }
+.rail-label{
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  font-size:10px;
+  color:var(--mute);
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  margin-top:auto;
+}
+
+/* ——— chat panel ——— */
+.chat{
+  border-right:1px solid var(--line);
+  background:var(--surface);
+  display:flex; flex-direction:column;
+  min-width:0;
+}
+.chat-head{
+  padding:14px 18px 10px;
+  border-bottom:1px solid var(--line-2);
+}
+.chat-head .h{
+  font-family:var(--f-display);
+  font-size:20px;
+  letter-spacing:-0.01em;
+  color:var(--ink);
+}
+.chat-head .s{ color:var(--steel); font-size:12.5px; margin-top:2px; }
+
+.pins{
+  display:flex; gap:6px; padding:10px 14px;
+  border-bottom:1px solid var(--line-2);
+  overflow-x:auto; scrollbar-width:none;
+}
+.pins::-webkit-scrollbar{ display:none; }
+.pin{
+  flex:none;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 9px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface);
+  font-size:12px;
+  color:var(--steel);
+  cursor:pointer;
+  transition: all .15s ease;
+}
+.pin:hover{ color:var(--ink); border-color:var(--mute-2); }
+.pin .dot{ width:6px;height:6px;border-radius:50%; background:var(--mute-2); }
+.pin.s3 .dot{ background:oklch(0.70 0.14 70); }
+.pin.ci .dot{ background:oklch(0.62 0.13 155); }
+.pin.pd .dot{ background:oklch(0.58 0.17 25); }
+.pin.kv .dot{ background:oklch(0.56 0.13 248); }
+
+.stream{
+  flex:1; overflow-y:auto;
+  padding:18px 18px 10px;
+  display:flex; flex-direction:column; gap:18px;
+  scroll-behavior:smooth;
+}
+.stream::-webkit-scrollbar{ width:6px; }
+.stream::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+
+.msg{ display:flex; gap:10px; align-items:flex-start; }
+.msg-avatar{
+  width:26px;height:26px;border-radius:50%;
+  flex:none; margin-top:2px;
+  display:grid;place-items:center;
+  font-size:10px; font-weight:500;
+  border:1px solid var(--line);
+}
+.msg-avatar.you{ background:var(--ink); color:white; border-color:var(--ink); }
+.msg-avatar.g{
+  background:var(--surface);
+  color:var(--accent);
+  position:relative;
+}
+.msg-avatar.g::before{
+  content:""; width:8px;height:8px;border-radius:2px;
+  background:var(--accent); transform:rotate(45deg);
+}
+.msg-body{ flex:1; min-width:0; }
+.msg-name{
+  font-size:11.5px; color:var(--steel-2);
+  margin-bottom:3px;
+  display:flex; align-items:baseline; gap:8px;
+  flex-wrap:nowrap;
+  min-width:0;
+}
+.msg-name b{ color:var(--ink); font-weight:500; font-size:12.5px; white-space:nowrap; flex:none; }
+.msg-name .t{ font-family:var(--f-mono); font-size:10.5px; color:var(--mute); white-space:nowrap; flex:none; }
+.msg-text{ color:var(--ink-2); font-size:13.5px; line-height:1.55; }
+.msg-text p{ margin:0 0 6px; }
+.msg-text p:last-child{ margin-bottom:0; }
+.msg-text code{
+  font-family:var(--f-mono); font-size:12px;
+  background:var(--surface-2);
+  padding:1px 5px; border-radius:4px;
+  color:var(--ink-2);
+}
+
+/* agent "reasoning" card */
+.tool-call{
+  margin-top:8px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+  overflow:hidden;
+}
+.tc-head{
+  padding:8px 12px;
+  display:flex; align-items:center; gap:8px;
+  font-size:12px; color:var(--steel);
+  border-bottom:1px solid var(--line-2);
+  background:var(--surface-2);
+}
+.tc-head .ico{ color:var(--accent); display:inline-flex; }
+.tc-head .sp{ flex:1; }
+.tc-head .dur{ font-family:var(--f-mono); font-size:11px; color:var(--mute); }
+.tc-body{ padding:8px 12px; font-family:var(--f-mono); font-size:11.5px; color:var(--steel); }
+.tc-body .row{ display:flex; gap:8px; padding:2px 0; }
+.tc-body .row .k{ color:var(--mute); min-width:70px; }
+.tc-body .row .v{ color:var(--ink-2); }
+.tc-body .row.ok .v{ color:var(--ok); }
+
+/* lamp preview card inside chat (reference to what opened on canvas) */
+.lamp-ref{
+  margin-top:8px;
+  display:flex; gap:10px; align-items:center;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+  cursor:pointer;
+}
+.lamp-ref:hover{ border-color:var(--mute-2); }
+.lamp-ref .tile{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,#FEF3C7,#FDE68A);
+  display:grid;place-items:center;
+  color:#92400E; font-family:var(--f-mono); font-size:11px; font-weight:500;
+  flex:none;
+  border:1px solid rgba(146,64,14,.15);
+}
+.lamp-ref .meta{ flex:1; min-width:0; }
+.lamp-ref .meta .t{ font-size:13px; color:var(--ink); font-weight:500; }
+.lamp-ref .meta .s{ font-size:11.5px; color:var(--steel); margin-top:1px; }
+.lamp-ref .act{ font-size:11.5px; color:var(--accent); display:flex; align-items:center; gap:4px; }
+
+/* suggestion chips */
+.suggests{
+  display:flex; flex-wrap:wrap; gap:6px;
+  margin-top:8px;
+}
+.suggest{
+  font-size:12px; color:var(--steel);
+  padding:5px 10px;
+  border:1px dashed var(--mute-2);
+  border-radius:999px;
+  background:transparent;
+  cursor:pointer;
+}
+.suggest:hover{ color:var(--ink); border-color:var(--steel-2); background:var(--surface-2); }
+
+/* composer */
+.composer{
+  border-top:1px solid var(--line-2);
+  padding:10px 14px 14px;
+  background:var(--surface);
+}
+.composer-box{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.composer-box:focus-within{
+  border-color:var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-3);
+}
+.composer textarea{
+  width:100%;
+  border:0; outline:0; resize:none;
+  padding:11px 12px 0;
+  background:transparent;
+  font-family:var(--f-sans); font-size:13.5px;
+  color:var(--ink);
+  min-height:44px;
+  max-height:160px;
+}
+.composer textarea::placeholder{ color:var(--mute); }
+.composer-actions{
+  display:flex; align-items:center; gap:6px;
+  padding:6px 8px 8px;
+}
+.composer-actions .left{ display:flex; gap:2px; }
+.composer-actions .right{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+.mini{
+  width:28px;height:28px;border-radius:7px;
+  display:grid;place-items:center;
+  color:var(--steel-2);
+  cursor:pointer; border:0; background:transparent;
+}
+.mini:hover{ background:var(--surface-2); color:var(--ink); }
+.mini svg{ width:14px;height:14px; stroke-width:1.6; }
+.send{
+  height:30px; padding:0 12px;
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--ink); color:white;
+  border:0; border-radius:8px;
+  font-family:var(--f-sans); font-size:12.5px; font-weight:500;
+  cursor:pointer;
+  transition: background .15s ease, transform .06s ease;
+}
+.send:hover{ background:var(--ink-2); }
+.send:active{ transform:translateY(1px); }
+.send:disabled{ background:var(--mute-2); cursor:not-allowed; }
+.send svg{ width:13px;height:13px; }
+
+.model-chip{
+  font-size:11.5px; color:var(--steel-2);
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 7px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--surface);
+  cursor:pointer;
+  font-family:var(--f-mono);
+}
+.model-chip:hover{ border-color:var(--mute-2); color:var(--ink); }
+.model-chip .pulse{ width:6px;height:6px;border-radius:50%; background:var(--ok); }
+
+/* ——— canvas ——— */
+.canvas{
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(2,23,82,.03), transparent 60%),
+    var(--paper);
+  display:flex; flex-direction:column;
+  min-width:0;
+  position:relative;
+}
+.canvas-head{
+  height:48px;
+  padding:0 18px;
+  display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.6);
+  backdrop-filter: blur(8px);
+  min-width:0;
+}
+.canvas-head .tabs{ min-width:0; overflow:hidden; }
+.canvas-head .tabs{
+  display:flex; gap:2px; align-items:center;
+  height:100%;
+}
+.tab{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:0 12px;
+  height:32px;
+  border-radius:8px;
+  font-size:12.5px; color:var(--steel);
+  cursor:pointer;
+  position:relative;
+  white-space:nowrap;
+  flex:none;
+}
+.tab .dotclose{
+  width:14px;height:14px;border-radius:4px;
+  display:none; align-items:center; justify-content:center;
+  color:var(--mute); margin-left:2px;
+}
+.tab:hover{ background:var(--surface-2); color:var(--ink); }
+.tab:hover .dotclose{ display:inline-flex; }
+.tab.active{ background:var(--surface); color:var(--ink); border:1px solid var(--line); box-shadow:var(--shadow-sm);}
+.tab .swatch{ width:8px;height:8px;border-radius:2px; background:var(--mute-2); }
+.tab.active .swatch{ background:var(--accent); }
+.canvas-head .right{ margin-left:auto; display:flex; align-items:center; gap:6px; }
+.status-pill{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--f-mono); font-size:11px;
+  color:var(--steel);
+  padding:4px 9px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface);
+  white-space:nowrap;
+  flex:none;
+}
+.status-pill .dot{ width:6px;height:6px;border-radius:50%; background:var(--ok); }
+
+.canvas-body{
+  flex:1;
+  overflow:auto;
+  padding:24px;
+  display:flex; justify-content:center;
+}
+
+/* empty state */
+.empty{
+  margin:auto;
+  max-width:520px;
+  text-align:center;
+  color:var(--steel);
+}
+.empty .em{
+  font-family:var(--f-display);
+  font-size:44px;
+  letter-spacing:-0.02em;
+  color:var(--ink);
+  margin-bottom:6px;
+  line-height:1.05;
+}
+.empty .em em{ color:var(--steel-2); }
+.empty .sub{ font-size:14px; color:var(--steel); max-width:380px; margin:0 auto 22px; }
+.empty .hint-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  text-align:left;
+  max-width:440px; margin:0 auto;
+}
+.hint{
+  padding:12px 14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+  cursor:pointer;
+  transition: all .15s ease;
+}
+.hint:hover{ border-color:var(--mute-2); transform:translateY(-1px); box-shadow:var(--shadow-sm); }
+.hint .t{ font-size:13px; color:var(--ink); font-weight:500; }
+.hint .s{ font-size:11.5px; color:var(--steel); margin-top:2px; }
+.hint .k{ font-family:var(--f-mono); font-size:10.5px; color:var(--mute); margin-top:6px; }
+
+/* ——— GenieLamp frame ——— */
+.lamp{
+  width:100%;
+  max-width:780px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  align-self:flex-start;
+}
+.lamp-head{
+  padding:16px 20px;
+  border-bottom:1px solid var(--line-2);
+  display:flex; align-items:center; gap:14px;
+}
+.lamp-head .icon{
+  width:40px;height:40px;border-radius:10px;
+  background:linear-gradient(135deg,#FEF3C7,#FDE68A);
+  display:grid;place-items:center;
+  color:#92400E;
+  font-family:var(--f-mono); font-size:12px; font-weight:500;
+  flex:none; border:1px solid rgba(146,64,14,.12);
+}
+.lamp-head .title{ flex:1; min-width:0; }
+.lamp-head .title .t{
+  font-size:15px; color:var(--ink); font-weight:500;
+  display:flex; align-items:center; gap:8px;
+  flex-wrap:wrap;
+}
+.lamp-head .title .t .verified{ white-space:nowrap; }
+.lamp-head .title .t .verified{
+  font-family:var(--f-mono); font-size:10px;
+  background:var(--accent-3); color:var(--accent);
+  padding:2px 6px; border-radius:999px;
+  border:1px solid var(--accent-2);
+}
+.lamp-head .title .s{ font-size:12px; color:var(--steel); margin-top:2px; font-family:var(--f-mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lamp-head .title .s span{ color:var(--mute); }
+
+.lamp-body{
+  padding:4px 0 0;
+}
+
+/* stepper */
+.steps{
+  display:flex; align-items:center; gap:0;
+  padding:14px 20px 10px;
+  border-bottom:1px solid var(--line-2);
+}
+.step{
+  display:flex; align-items:center; gap:8px;
+  font-size:12px; color:var(--mute);
+  font-family:var(--f-mono);
+  white-space:nowrap;
+  flex:none;
+}
+.step .n{
+  width:18px;height:18px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:10px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--mute);
+}
+.step.done .n{ background:var(--ink); color:white; border-color:var(--ink); }
+.step.done{ color:var(--steel); }
+.step.current .n{ background:var(--accent); color:white; border-color:var(--accent); }
+.step.current{ color:var(--ink); }
+.step-bar{
+  flex:1; height:1px; background:var(--line); margin:0 12px;
+  position:relative;
+}
+.step-bar.done{ background:var(--ink); }
+
+.form{
+  padding:18px 20px 4px;
+  display:grid; grid-template-columns: 1fr 1fr; gap:18px 20px;
+}
+@media (max-width: 780px){
+  .form{ grid-template-columns: 1fr; }
+}
+.field{ display:flex; flex-direction:column; gap:6px; grid-column: span 1; }
+.field.full{ grid-column: 1 / -1; }
+.field label{
+  font-size:12px; color:var(--steel);
+  display:flex; align-items:center; gap:6px;
+}
+.field label .req{ color:var(--danger); }
+.field label .hint-i{
+  width:14px;height:14px;border-radius:50%;
+  background:var(--surface-2); color:var(--mute);
+  display:grid;place-items:center; font-size:10px;
+  cursor:help;
+}
+.input, .select{
+  height:36px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:0 11px;
+  background:var(--surface);
+  font-family:var(--f-sans); font-size:13px;
+  color:var(--ink);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.input:focus, .select:focus{
+  outline:0;
+  border-color:var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-3);
+}
+.input.mono{ font-family:var(--f-mono); font-size:12.5px; }
+.input-aff{
+  display:flex; align-items:stretch;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--surface);
+  overflow:hidden;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.input-aff:focus-within{
+  border-color:var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-3);
+}
+.input-aff .aff{
+  padding:0 10px; display:grid;place-items:center;
+  background:var(--surface-2);
+  font-family:var(--f-mono); font-size:12px; color:var(--steel);
+  border-right:1px solid var(--line);
+}
+.input-aff input{
+  flex:1; border:0; outline:0; background:transparent;
+  padding:0 11px; height:34px;
+  font-family:var(--f-mono); font-size:12.5px;
+  color:var(--ink);
+}
+.field .help{
+  font-size:11.5px; color:var(--steel);
+  display:flex; align-items:center; gap:6px;
+  flex-wrap:wrap;
+}
+.field .help code{ white-space:nowrap; }
+.field .help.prefilled{ color:var(--accent); }
+.field .help .ai-badge{
+  font-family:var(--f-mono); font-size:9.5px;
+  padding:1px 5px;
+  background:var(--accent-3);
+  color:var(--accent);
+  border-radius:4px;
+  border:1px solid var(--accent-2);
+  letter-spacing:.04em;
+}
+
+/* toggle group */
+.toggle{
+  display:flex;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:3px;
+  background:var(--surface-2);
+  height:36px;
+}
+.toggle button{
+  flex:1; min-width:0; border:0; background:transparent;
+  font-family:var(--f-mono); font-size:12px; color:var(--steel);
+  cursor:pointer;
+  border-radius:5px;
+  white-space:nowrap;
+  padding:0 4px;
+}
+.toggle button.active{
+  background:var(--surface);
+  color:var(--ink);
+  box-shadow:var(--shadow-sm);
+}
+
+/* checkbox row */
+.check-row{
+  display:flex; align-items:flex-start; gap:10px;
+  padding:12px 14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+  cursor:pointer;
+}
+.check-row + .check-row{ margin-top:8px; }
+.check-row.on{ border-color:var(--accent); background:var(--accent-3); }
+.check-row .cb{
+  width:16px;height:16px;border-radius:4px;
+  border:1.5px solid var(--mute-2);
+  display:grid;place-items:center;
+  flex:none; margin-top:1px;
+  color:white;
+  transition: all .15s ease;
+}
+.check-row.on .cb{ background:var(--accent); border-color:var(--accent); }
+.check-row .t{ font-size:13px; color:var(--ink); font-weight:500; }
+.check-row .s{ font-size:12px; color:var(--steel); margin-top:2px; }
+.check-row .tag{
+  display:inline-block;
+  font-family:var(--f-mono); font-size:10px;
+  background:var(--surface-2); color:var(--steel);
+  border:1px solid var(--line);
+  padding:1px 6px; border-radius:4px;
+  margin-right:4px;
+}
+
+/* review / summary */
+.review{
+  padding:14px 20px 4px;
+}
+.review-block{
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+  overflow:hidden;
+}
+.review-block .rh{
+  padding:10px 14px;
+  border-bottom:1px solid var(--line-2);
+  background:var(--surface-2);
+  font-size:12px; color:var(--steel);
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--f-mono);
+  text-transform:uppercase; letter-spacing:.06em;
+}
+.review-block .rb{
+  padding:4px 0;
+}
+.rrow{
+  display:grid; grid-template-columns: 180px 1fr;
+  padding:9px 14px;
+  border-bottom:1px solid var(--line-2);
+  font-size:13px;
+  align-items:center;
+}
+.rrow:last-child{ border-bottom:0; }
+.rrow .k{ color:var(--steel); font-family:var(--f-mono); font-size:12px; }
+.rrow .v{ color:var(--ink); font-family:var(--f-mono); font-size:12.5px; }
+.rrow .v .good{ color:var(--ok); }
+.rrow .v .bad{ color:var(--danger); }
+
+.risk{
+  display:flex; gap:10px; align-items:flex-start;
+  margin-top:14px;
+  padding:12px 14px;
+  border:1px solid oklch(0.88 0.06 70);
+  background:oklch(0.98 0.03 80);
+  border-radius:10px;
+  color:oklch(0.35 0.08 70);
+  font-size:12.5px;
+  line-height:1.5;
+}
+.risk svg{ flex:none; color:oklch(0.60 0.14 70); margin-top:1px; }
+.risk b{ color:oklch(0.30 0.10 60); font-weight:500; }
+
+/* lamp footer */
+.lamp-foot{
+  margin-top:14px;
+  border-top:1px solid var(--line-2);
+  padding:14px 20px;
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface-2);
+}
+.lamp-foot .meta{
+  font-size:11.5px; color:var(--steel);
+  font-family:var(--f-mono);
+  display:flex; align-items:center; gap:10px;
+}
+.lamp-foot .meta .trace{ color:var(--mute); }
+.lamp-foot .sp{ flex:1; }
+.btn{
+  height:34px; padding:0 14px;
+  display:inline-flex; align-items:center; gap:6px;
+  border-radius:8px;
+  font-family:var(--f-sans); font-size:13px; font-weight:500;
+  cursor:pointer;
+  border:1px solid var(--line);
+  background:var(--surface);
+  color:var(--ink);
+  transition: all .15s ease;
+}
+.btn:hover{ border-color:var(--mute-2); }
+.btn.primary{
+  background:var(--ink); color:white; border-color:var(--ink);
+}
+.btn.primary:hover{ background:var(--ink-2); border-color:var(--ink-2); }
+.btn.ghost{ border-color:transparent; background:transparent; color:var(--steel); }
+.btn.ghost:hover{ background:var(--surface); color:var(--ink); }
+.btn svg{ width:14px;height:14px; }
+
+/* typing dots */
+.typing{
+  display:inline-flex; gap:3px; align-items:center;
+  padding:6px 10px;
+  background:var(--surface-2);
+  border-radius:999px;
+}
+.typing span{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--mute-2);
+  animation: bob 1.2s infinite ease-in-out;
+}
+.typing span:nth-child(2){ animation-delay:.15s; }
+.typing span:nth-child(3){ animation-delay:.3s; }
+@keyframes bob{
+  0%,80%,100%{ transform:translateY(0); opacity:.5; }
+  40%{ transform:translateY(-3px); opacity:1; }
+}
+
+/* reveal */
+.reveal{
+  animation: rise .45s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes rise{
+  from{ opacity:0; transform: translateY(6px); }
+  to{ opacity:1; transform:none; }
+}
+
+/* scrollbar in canvas */
+.canvas-body::-webkit-scrollbar{ width:8px; height:8px; }
+.canvas-body::-webkit-scrollbar-thumb{ background:var(--line); border-radius:4px; }
+
+/* icons */
+.ic{ width:14px;height:14px; stroke-width:1.6; }
+.ic-sm{ width:12px;height:12px; stroke-width:1.8; }
+
+/* responsive safety */
+@media (max-width: 1280px){
+  .app{ grid-template-columns: 56px 380px 1fr; }
+  .lamp{ max-width: 100%; }
+}
+@media (max-width: 1100px){
+  .app{ grid-template-columns: 56px 360px 1fr; }
+  .canvas-body{ padding:16px; }
+  .form{ grid-template-columns: 1fr; }
+}
+@media (max-width: 900px){
+  .app{ grid-template-columns: 56px 1fr; }
+  .canvas{ display:none; }
+}
+
+/* ——— Marketplace ——— */
+.market{
+  width:100%;
+  max-width:1120px;
+  margin:0 auto;
+  align-self:flex-start;
+}
+.market-head{
+  display:flex; align-items:flex-end; gap:20px;
+  padding:4px 4px 18px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+.market-head .title-block{ flex:1 1 360px; min-width:0; display:flex; flex-direction:column; }
+.market-head .ttl{
+  font-family:var(--f-display);
+  font-size:40px;
+  letter-spacing:-0.02em;
+  color:var(--ink);
+  line-height:1.1;
+  margin:0;
+  display:block;
+  position:relative;
+}
+.market-head .ttl em{ color:var(--steel-2); font-style:italic; }
+@media (max-width: 700px){
+  .market-head .ttl{ font-size:32px; }
+}
+.market-head .sub{
+  color:var(--steel); font-size:13px;
+  max-width:480px;
+  margin:18px 0 0;
+  display:block;
+  position:relative;
+  line-height:1.5;
+}
+.market-head .spacer{ flex:1; min-width:20px; }
+.market-search{
+  display:flex; align-items:center; gap:8px;
+  height:38px; min-width:260px;
+  padding:0 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+  color:var(--steel);
+  font-family:var(--f-sans); font-size:13px;
+  flex:1; max-width:360px;
+}
+.market-search input{
+  flex:1; border:0; outline:0; background:transparent;
+  font-family:var(--f-sans); font-size:13px; color:var(--ink);
+}
+.market-search .kbd{ flex:none; }
+.market-search:focus-within{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-3); }
+
+.market-stats{
+  display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;
+  margin-bottom:24px;
+}
+.mstat{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  padding:12px 14px;
+}
+.mstat .n{ font-family:var(--f-display); font-size:26px; color:var(--ink); letter-spacing:-0.01em; line-height:1; }
+.mstat .l{ font-size:11.5px; color:var(--steel); font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.06em; margin-top:8px; }
+.mstat .l .ok{ color:var(--ok); }
+
+.market-layout{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:28px;
+}
+@media (max-width: 920px){
+  .market-layout{ grid-template-columns: 1fr; }
+  .market-side{ display:flex; overflow-x:auto; gap:4px; }
+  .market-stats{ grid-template-columns: repeat(2, 1fr); }
+}
+.market-side{
+  display:flex; flex-direction:column; gap:2px;
+  position:sticky; top:0;
+}
+.market-side .slbl{
+  font-family:var(--f-mono); font-size:10.5px;
+  color:var(--mute); text-transform:uppercase; letter-spacing:.08em;
+  padding:8px 10px 4px;
+}
+.cat{
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px;
+  border-radius:8px;
+  font-size:13px; color:var(--steel);
+  cursor:pointer;
+  border:1px solid transparent;
+  white-space:nowrap;
+  flex:none;
+}
+.cat:hover{ background:var(--surface); color:var(--ink); }
+.cat.on{ background:var(--surface); color:var(--ink); border-color:var(--line); font-weight:500; }
+.cat .c{ margin-left:auto; font-family:var(--f-mono); font-size:11px; color:var(--mute); }
+.cat .sw{ width:8px;height:8px;border-radius:2px; background:var(--mute-2); }
+
+.market-main{ min-width:0; }
+.section-h{
+  display:flex; align-items:center; gap:10px;
+  margin:6px 0 12px;
+  flex-wrap:wrap;
+}
+.section-h .t{ font-family:var(--f-display); font-size:22px; color:var(--ink); letter-spacing:-0.01em; line-height:1.2; padding-bottom:2px; }
+.section-h .c{ color:var(--mute); font-family:var(--f-mono); font-size:11px; }
+.section-h .sp{ flex:1; }
+.section-h .sort{
+  font-family:var(--f-mono); font-size:11.5px;
+  color:var(--steel);
+  border:1px solid var(--line);
+  background:var(--surface);
+  padding:4px 10px; border-radius:999px;
+  display:inline-flex; align-items:center; gap:6px;
+  cursor:pointer;
+}
+
+/* featured strip */
+.featured{
+  display:grid; grid-template-columns: repeat(2, 1fr); gap:12px;
+  margin-bottom:28px;
+}
+@media (max-width: 780px){ .featured{ grid-template-columns:1fr; } }
+.feat{
+  position:relative;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface);
+  padding:18px 18px 16px;
+  overflow:hidden;
+  cursor:pointer;
+  transition: all .2s ease;
+}
+.feat:hover{ transform:translateY(-1px); box-shadow:var(--shadow); border-color:var(--mute-2); }
+.feat::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(400px 140px at 100% 0%, var(--feat-glow, rgba(15,23,42,.04)), transparent 60%);
+}
+.feat .ribbon{
+  font-family:var(--f-mono); font-size:10px;
+  color:var(--accent); background:var(--accent-3);
+  border:1px solid var(--accent-2);
+  padding:2px 7px; border-radius:999px;
+  display:inline-block; margin-bottom:10px;
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.feat .fh{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.feat .fh .icon{
+  width:36px; height:36px; border-radius:9px;
+  display:grid; place-items:center;
+  font-family:var(--f-mono); font-size:12px; font-weight:500;
+  border:1px solid rgba(0,0,0,.08);
+}
+.feat .fh .meta{ min-width:0; }
+.feat .fh .meta .t{ font-size:15px; color:var(--ink); font-weight:500; }
+.feat .fh .meta .s{ font-family:var(--f-mono); font-size:11.5px; color:var(--steel); margin-top:1px; }
+.feat .desc{ color:var(--steel); font-size:13px; line-height:1.5; margin-bottom:12px; }
+.feat .ffoot{
+  display:flex; align-items:center; gap:10px;
+  font-family:var(--f-mono); font-size:11px; color:var(--mute);
+}
+.feat .ffoot .spacer{ flex:1; }
+.feat .ffoot .tag{ color:var(--steel); }
+
+/* card grid */
+.cards{
+  display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;
+}
+@media (max-width: 1100px){ .cards{ grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px){ .cards{ grid-template-columns: 1fr; } }
+.card{
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  padding:14px;
+  display:flex; flex-direction:column; gap:10px;
+  transition: all .15s ease;
+  cursor:pointer;
+  min-width:0;
+}
+.card:hover{ border-color:var(--mute-2); box-shadow:var(--shadow-sm); transform:translateY(-1px); }
+.card .ch{ display:flex; align-items:flex-start; gap:10px; }
+.card .ch .icon{
+  width:34px; height:34px; border-radius:8px;
+  display:grid; place-items:center;
+  font-family:var(--f-mono); font-size:11px; font-weight:500;
+  flex:none; border:1px solid rgba(0,0,0,.08);
+}
+.card .ch .meta{ min-width:0; flex:1; }
+.card .ch .meta .t{
+  font-size:13.5px; color:var(--ink); font-weight:500;
+  display:flex; align-items:center; gap:6px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.card .ch .meta .t .chk{ color:var(--accent); flex:none; display:inline-flex; }
+.card .ch .meta .s{ font-family:var(--f-mono); font-size:11px; color:var(--steel); margin-top:2px; }
+.card .desc{ font-size:12.5px; color:var(--steel); line-height:1.45; }
+.card .tags{ display:flex; gap:5px; flex-wrap:wrap; }
+.card .tags .tg{
+  font-family:var(--f-mono); font-size:10px;
+  color:var(--steel); background:var(--surface-2);
+  border:1px solid var(--line);
+  padding:2px 6px; border-radius:4px;
+}
+.card .cfoot{
+  display:flex; align-items:center; gap:8px;
+  padding-top:10px; margin-top:auto;
+  border-top:1px dashed var(--line);
+  font-family:var(--f-mono); font-size:11px; color:var(--mute);
+}
+.card .cfoot .sp{ flex:1; }
+.card .cfoot .enabled{
+  color:var(--ok);
+  display:inline-flex; align-items:center; gap:4px;
+}
+.card .btn-sm{
+  height:26px; padding:0 10px;
+  font-size:11.5px; font-weight:500;
+  border-radius:6px;
+  border:1px solid var(--line);
+  background:var(--surface); color:var(--ink);
+  cursor:pointer;
+  display:inline-flex; align-items:center; gap:4px;
+}
+.card .btn-sm:hover{ border-color:var(--mute-2); }
+.card .btn-sm.primary{ background:var(--ink); color:white; border-color:var(--ink); }
+.card .btn-sm.primary:hover{ background:var(--ink-2); }
+.card .btn-sm.enabled-btn{ background:var(--accent-3); border-color:var(--accent-2); color:var(--accent); }
+
+</style>
+</head>
+<body>
+
+<!-- ——— Top bar ——— -->
+<div class="top">
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">AskGenie<em> · cockpit</em></div>
+  </div>
+  <div class="crumbs">
+    <span>Acme Platform</span>
+    <span class="sep">/</span>
+    <span>prod-us-east-1</span>
+    <span class="sep">/</span>
+    <span class="here">Workspace</span>
+  </div>
+  <div class="top-right">
+    <button class="iconbtn ghost" title="Search">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      Search
+      <span class="kbd">⌘K</span>
+    </button>
+    <button class="iconbtn ghost" title="Audit log">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>
+      Audit
+    </button>
+    <button class="iconbtn ghost" title="Notifications">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </button>
+    <div class="avatar">MC</div>
+  </div>
+</div>
+
+<!-- ——— App grid ——— -->
+<div class="app">
+
+  <!-- Left rail -->
+  <aside class="rail">
+    <div class="rail-group">
+      <button class="rail-btn active" id="railChat" title="Chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <button class="rail-btn" id="railMarket" title="Marketplace">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="rail-btn" title="Pinned">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M5 10h14l-2 10H7z"/></svg>
+      </button>
+      <button class="rail-btn" title="Runs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-6"/></svg>
+      </button>
+    </div>
+    <div class="rail-group">
+      <button class="rail-btn" title="Approvals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </button>
+      <button class="rail-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+    <div class="rail-label">Acme · prod</div>
+  </aside>
+
+  <!-- Chat panel -->
+  <section class="chat">
+    <div class="chat-head">
+      <div class="h">Workspace</div>
+      <div class="s">Connected to <span style="color:var(--ink)">prod-us-east-1</span> · 12 lamps enabled</div>
+    </div>
+
+    <!-- Pinned tools -->
+    <div class="pins" id="pins">
+      <button class="pin s3"><span class="dot"></span>Create S3 Bucket</button>
+      <button class="pin ci"><span class="dot"></span>Pipeline Status</button>
+      <button class="pin pd"><span class="dot"></span>On-call Now</button>
+      <button class="pin kv"><span class="dot"></span>Rotate Secret</button>
+      <button class="pin"><span class="dot"></span>+ Pin a lamp</button>
+    </div>
+
+    <!-- Stream -->
+    <div class="stream" id="stream"></div>
+
+    <!-- Composer -->
+    <div class="composer">
+      <div class="composer-box">
+        <textarea id="composer" rows="1" placeholder="Ask AskGenie — describe what you need to do…"></textarea>
+        <div class="composer-actions">
+          <div class="left">
+            <button class="mini" title="Attach">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m21 10-9 9a6 6 0 0 1-8.5-8.5l9-9A4 4 0 0 1 18 7l-8.5 8.5a2 2 0 0 1-3-3L15 4"/></svg>
+            </button>
+            <button class="mini" title="Slash commands">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m16 4-8 16"/></svg>
+            </button>
+            <button class="mini" title="Context: this run">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>
+            </button>
+          </div>
+          <div class="right">
+            <button class="model-chip"><span class="pulse"></span>agent · orchestrator</button>
+            <button class="send" id="sendBtn" disabled>
+              Send
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Canvas -->
+  <section class="canvas">
+    <div class="canvas-head">
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-tab="home">
+          <span class="swatch"></span>
+          Canvas
+        </div>
+      </div>
+      <div class="right">
+        <div class="status-pill"><span class="dot"></span>bridge · healthy</div>
+        <button class="iconbtn ghost" title="Expand">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="canvas-body" id="canvasBody">
+      <!-- Empty state -->
+      <div class="empty" id="empty">
+        <div class="em">Ask, and it's <em>done.</em></div>
+        <div class="sub">Describe a task in plain English. AskGenie will find the right tool and bring it here.</div>
+        <div class="hint-grid">
+          <div class="hint" data-send="Create a private S3 bucket for storing nightly analytics exports.">
+            <div class="t">Create an S3 bucket</div>
+            <div class="s">For nightly analytics exports</div>
+            <div class="k">aws · storage</div>
+          </div>
+          <div class="hint" data-send="What's the status of the last deploy on api-gateway?">
+            <div class="t">Check a deploy</div>
+            <div class="s">Last deploy of api-gateway</div>
+            <div class="k">ci · gitlab</div>
+          </div>
+          <div class="hint" data-send="Who is on-call for payments right now?">
+            <div class="t">Find on-call</div>
+            <div class="s">Payments rotation</div>
+            <div class="k">pagerduty</div>
+          </div>
+          <div class="hint" data-send="Rotate the Stripe secret in prod-us-east-1.">
+            <div class="t">Rotate a secret</div>
+            <div class="s">Stripe, prod-us-east-1</div>
+            <div class="k">vault</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Templates -->
+<template id="tmpl-msg-you">
+  <div class="msg reveal">
+    <div class="msg-avatar you">MC</div>
+    <div class="msg-body">
+      <div class="msg-name"><b>Maya Chen</b><span class="t">just now</span></div>
+      <div class="msg-text"></div>
+    </div>
+  </div>
+</template>
+
+<template id="tmpl-msg-agent">
+  <div class="msg reveal">
+    <div class="msg-avatar g"></div>
+    <div class="msg-body">
+      <div class="msg-name"><b>AskGenie</b><span class="t">thinking…</span></div>
+      <div class="msg-text"></div>
+    </div>
+  </div>
+</template>
+
+<script>
+(function(){
+  const stream = document.getElementById('stream');
+  const composer = document.getElementById('composer');
+  const sendBtn = document.getElementById('sendBtn');
+  const canvasBody = document.getElementById('canvasBody');
+  const tabs = document.getElementById('tabs');
+
+  function autosize(t){
+    t.style.height='auto';
+    t.style.height = Math.min(t.scrollHeight, 160)+'px';
+  }
+  composer.addEventListener('input', ()=>{
+    autosize(composer);
+    sendBtn.disabled = composer.value.trim().length === 0;
+  });
+  composer.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && !e.shiftKey){
+      e.preventDefault();
+      if(!sendBtn.disabled) send();
+    }
+  });
+
+  function scrollStream(){
+    stream.scrollTop = stream.scrollHeight + 1000;
+  }
+
+  function addYou(text){
+    const tmpl = document.getElementById('tmpl-msg-you').content.cloneNode(true);
+    tmpl.querySelector('.msg-text').textContent = text;
+    const node = tmpl.firstElementChild;
+    stream.appendChild(node);
+    scrollStream();
+    return node;
+  }
+
+  function addAgent(){
+    const tmpl = document.getElementById('tmpl-msg-agent').content.cloneNode(true);
+    const node = tmpl.firstElementChild;
+    stream.appendChild(node);
+    scrollStream();
+    return node;
+  }
+
+  function setAgentTyping(node, typing){
+    const t = node.querySelector('.msg-text');
+    if(typing){
+      t.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    }
+  }
+  function setAgentName(node, t){
+    node.querySelector('.msg-name .t').textContent = t;
+  }
+  function setAgentHTML(node, html){
+    node.querySelector('.msg-text').innerHTML = html;
+    scrollStream();
+  }
+
+  // ——— The scripted "Create S3 Bucket" flow ———
+  function typeThen(delay, fn){ return new Promise(r => setTimeout(()=>{ fn(); r(); }, delay)); }
+
+  async function runS3Flow(userText){
+    // 1) agent typing
+    const a = addAgent();
+    setAgentTyping(a, true);
+    await typeThen(700, ()=>{});
+
+    // 2) agent shows a reasoning / tool-call card
+    setAgentName(a, 'reasoning');
+    setAgentHTML(a, `
+      <p>Let me find the right tool for that.</p>
+      <div class="tool-call">
+        <div class="tc-head">
+          <span class="ico">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </span>
+          <span>Matching intent via Orchestrator</span>
+          <span class="sp"></span>
+          <span class="dur">0.42s</span>
+        </div>
+        <div class="tc-body">
+          <div class="row"><span class="k">tool</span><span class="v">registry.search_intents</span></div>
+          <div class="row"><span class="k">query</span><span class="v">"create s3 bucket for analytics"</span></div>
+          <div class="row ok"><span class="k">match</span><span class="v">aws-storage → create_bucket · 0.94 confidence</span></div>
+          <div class="row"><span class="k">account</span><span class="v">acme-prod (us-east-1) · role: platform-ops</span></div>
+        </div>
+      </div>
+    `);
+    scrollStream();
+    await typeThen(1200, ()=>{});
+
+    // 3) agent reasons about missing fields / pre-fills
+    setAgentHTML(a, `
+      <p>Found it — the <b>AWS Storage</b> lamp can do this. I pre-filled a few fields from your recent context. You can review and confirm on the right.</p>
+      <div class="tool-call">
+        <div class="tc-head">
+          <span class="ico">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </span>
+          <span>Pre-fill via Semantic Interface Protocol</span>
+          <span class="sp"></span>
+          <span class="dur">0.18s</span>
+        </div>
+        <div class="tc-body">
+          <div class="row"><span class="k">name</span><span class="v">acme-analytics-nightly-<i style="color:var(--mute)">•••</i></span></div>
+          <div class="row"><span class="k">region</span><span class="v">us-east-1 <i style="color:var(--mute)">(inherits workspace)</i></span></div>
+          <div class="row"><span class="k">visibility</span><span class="v">private · block-all-public</span></div>
+          <div class="row"><span class="k">purpose</span><span class="v">"nightly analytics exports"</span></div>
+        </div>
+      </div>
+      <div class="lamp-ref" id="openLamp">
+        <div class="tile">S3</div>
+        <div class="meta">
+          <div class="t">Create S3 Bucket</div>
+          <div class="s">AWS Storage · v2.4.1 · open in canvas</div>
+        </div>
+        <div class="act">Open
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        </div>
+      </div>
+      <div class="suggests">
+        <button class="suggest" data-send="Also set up a lifecycle rule: expire objects after 90 days.">＋ add 90-day expiration</button>
+        <button class="suggest" data-send="Tag it with team=data-platform and cost-center=analytics.">＋ add standard tags</button>
+        <button class="suggest" data-send="Grant the analytics-readers group read-only access.">＋ grant analytics-readers</button>
+      </div>
+    `);
+    setAgentName(a, 'just now');
+    scrollStream();
+
+    // 4) open lamp on canvas
+    await typeThen(350, ()=>{});
+    openS3Lamp();
+
+    // wire the preview
+    const openBtn = a.querySelector('#openLamp');
+    if(openBtn) openBtn.addEventListener('click', openS3Lamp);
+
+    // wire suggests
+    a.querySelectorAll('.suggest').forEach(s=>{
+      s.addEventListener('click', ()=>{
+        composer.value = s.dataset.send;
+        autosize(composer);
+        sendBtn.disabled = false;
+        composer.focus();
+      });
+    });
+  }
+
+  function openS3Lamp(){
+    // add tab
+    const existing = tabs.querySelector('[data-tab="s3"]');
+    tabs.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    if(!existing){
+      const t = document.createElement('div');
+      t.className = 'tab active';
+      t.dataset.tab = 's3';
+      t.innerHTML = `<span class="swatch"></span>Create S3 Bucket
+        <span class="dotclose" title="Close">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </span>`;
+      tabs.appendChild(t);
+      t.addEventListener('click', (e)=>{
+        if(e.target.closest('.dotclose')){
+          t.remove();
+          tabs.querySelector('[data-tab="home"]').classList.add('active');
+          canvasBody.innerHTML = homeHTML();
+          wireHints();
+          return;
+        }
+        tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        t.classList.add('active');
+        renderS3();
+      });
+    } else {
+      existing.classList.add('active');
+    }
+    renderS3();
+  }
+
+  function renderS3(){
+    canvasBody.innerHTML = s3HTML();
+    wireS3();
+    // animate in
+    canvasBody.querySelector('.lamp').classList.add('reveal');
+  }
+
+  function homeHTML(){
+    return `
+      <div class="empty">
+        <div class="em">Ask, and it's <em>done.</em></div>
+        <div class="sub">Describe a task in plain English. AskGenie will find the right tool and bring it here.</div>
+        <div class="hint-grid">
+          <div class="hint" data-send="Create a private S3 bucket for storing nightly analytics exports.">
+            <div class="t">Create an S3 bucket</div>
+            <div class="s">For nightly analytics exports</div>
+            <div class="k">aws · storage</div>
+          </div>
+          <div class="hint" data-send="What's the status of the last deploy on api-gateway?">
+            <div class="t">Check a deploy</div>
+            <div class="s">Last deploy of api-gateway</div>
+            <div class="k">ci · gitlab</div>
+          </div>
+          <div class="hint" data-send="Who is on-call for payments right now?">
+            <div class="t">Find on-call</div>
+            <div class="s">Payments rotation</div>
+            <div class="k">pagerduty</div>
+          </div>
+          <div class="hint" data-send="Rotate the Stripe secret in prod-us-east-1.">
+            <div class="t">Rotate a secret</div>
+            <div class="s">Stripe, prod-us-east-1</div>
+            <div class="k">vault</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function s3HTML(){
+    return `
+    <div class="lamp">
+      <div class="lamp-head">
+        <div class="icon">S3</div>
+        <div class="title">
+          <div class="t">Create S3 Bucket <span class="verified">verified · first-party</span></div>
+          <div class="s">aws-storage<span> · </span>v2.4.1<span> · </span>acme-prod / us-east-1</div>
+        </div>
+        <button class="iconbtn ghost" title="More">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+      </div>
+
+      <div class="lamp-body">
+        <div class="steps">
+          <div class="step done"><div class="n">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="m5 12 5 5L20 7"/></svg>
+          </div>Intent</div>
+          <div class="step-bar done"></div>
+          <div class="step current" id="stepDetails"><div class="n">2</div>Details</div>
+          <div class="step-bar"></div>
+          <div class="step" id="stepReview"><div class="n">3</div>Review & run</div>
+        </div>
+
+        <div id="stepPanel">
+          ${detailsHTML()}
+        </div>
+      </div>
+    </div>
+    `;
+  }
+
+  function detailsHTML(){
+    return `
+    <div class="form" id="s3form">
+      <div class="field full">
+        <label>Bucket name <span class="req">*</span> <span class="hint-i">i</span></label>
+        <div class="input-aff">
+          <div class="aff">s3://</div>
+          <input id="f-name" value="acme-analytics-nightly-exports" />
+        </div>
+        <div class="help prefilled">
+          <span class="ai-badge">PRE-FILLED</span>
+          Generated from "nightly analytics exports". Globally unique, kebab-cased, team-prefixed.
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Region</label>
+        <select class="select">
+          <option>us-east-1 (N. Virginia) — workspace default</option>
+          <option>us-west-2 (Oregon)</option>
+          <option>eu-west-1 (Ireland)</option>
+          <option>ap-southeast-2 (Sydney)</option>
+        </select>
+        <div class="help">Inherits from <code style="font-family:var(--f-mono);font-size:11.5px;color:var(--steel)">workspace → prod-us-east-1</code></div>
+      </div>
+
+      <div class="field">
+        <label>Storage class</label>
+        <div class="toggle" role="tablist" data-field="class">
+          <button class="active" data-v="standard">Standard</button>
+          <button data-v="ia">Infrequent</button>
+          <button data-v="glacier">Glacier</button>
+        </div>
+        <div class="help">Estimated monthly cost: <b style="color:var(--ink)">$4.60 / TB</b></div>
+      </div>
+
+      <div class="field full">
+        <label>Access & encryption</label>
+
+        <div class="check-row on" data-chk="block-public">
+          <div class="cb">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"><path d="m5 12 5 5L20 7"/></svg>
+          </div>
+          <div>
+            <div class="t">Block all public access <span class="tag" style="margin-left:6px">policy · required</span></div>
+            <div class="s">Enforced for production accounts by Acme's security baseline.</div>
+          </div>
+        </div>
+
+        <div class="check-row on" data-chk="sse">
+          <div class="cb">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"><path d="m5 12 5 5L20 7"/></svg>
+          </div>
+          <div>
+            <div class="t">Server-side encryption (SSE-KMS)</div>
+            <div class="s">Using <code>alias/acme-data-platform</code>. Rotated automatically every 90 days.</div>
+          </div>
+        </div>
+
+        <div class="check-row" data-chk="versioning">
+          <div class="cb"></div>
+          <div>
+            <div class="t">Enable versioning</div>
+            <div class="s">Keep previous object versions. Adds ~5% storage overhead.</div>
+          </div>
+        </div>
+
+        <div class="check-row" data-chk="lifecycle">
+          <div class="cb"></div>
+          <div>
+            <div class="t">Lifecycle rule: expire after 90 days</div>
+            <div class="s">Suggested for nightly exports. Transition to Glacier at 30d.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field full">
+        <label>Tags</label>
+        <div class="input-aff" style="margin-bottom:6px">
+          <div class="aff">team</div>
+          <input value="data-platform" />
+        </div>
+        <div class="input-aff">
+          <div class="aff">env</div>
+          <input value="prod" />
+        </div>
+      </div>
+    </div>
+
+    <div class="lamp-foot">
+      <div class="meta">
+        <span>via Application Bridge</span>
+        <span class="trace">trace · 01JD9Y…4K2</span>
+      </div>
+      <div class="sp"></div>
+      <button class="btn ghost" id="cancelBtn">Cancel</button>
+      <button class="btn" id="backBtn" style="display:none">Back</button>
+      <button class="btn primary" id="nextBtn">
+        Continue to review
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+    </div>
+    `;
+  }
+
+  function reviewHTML(data){
+    return `
+    <div class="review">
+      <div class="review-block">
+        <div class="rh">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><path d="M3 10h18"/></svg>
+          Bucket
+        </div>
+        <div class="rb">
+          <div class="rrow"><span class="k">name</span><span class="v">${data.name}</span></div>
+          <div class="rrow"><span class="k">region</span><span class="v">us-east-1</span></div>
+          <div class="rrow"><span class="k">storage class</span><span class="v">${data.cls}</span></div>
+          <div class="rrow"><span class="k">versioning</span><span class="v">${data.versioning ? '<span class="good">enabled</span>' : 'disabled'}</span></div>
+          <div class="rrow"><span class="k">lifecycle</span><span class="v">${data.lifecycle ? '<span class="good">90-day expire · glacier at 30d</span>' : 'none'}</span></div>
+        </div>
+      </div>
+
+      <div class="review-block" style="margin-top:14px">
+        <div class="rh">
+          <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Security
+        </div>
+        <div class="rb">
+          <div class="rrow"><span class="k">public access</span><span class="v"><span class="good">blocked</span></span></div>
+          <div class="rrow"><span class="k">encryption</span><span class="v">SSE-KMS · alias/acme-data-platform</span></div>
+          <div class="rrow"><span class="k">iam role</span><span class="v">role/platform-ops (assumed via bridge)</span></div>
+          <div class="rrow"><span class="k">audit</span><span class="v">logged to acme-audit-prod</span></div>
+        </div>
+      </div>
+
+      <div class="risk">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <div>
+          <b>Approval required.</b> This action creates a billable resource in a production account. Your policy routes it to the on-call platform lead — <b>Jordan Park</b> — who'll be notified in Slack. Typical turnaround: &lt; 5 min.
+        </div>
+      </div>
+    </div>
+
+    <div class="lamp-foot">
+      <div class="meta">
+        <span>via Application Bridge</span>
+        <span class="trace">trace · 01JD9Y…4K2</span>
+      </div>
+      <div class="sp"></div>
+      <button class="btn ghost" id="cancelBtn">Cancel</button>
+      <button class="btn" id="backBtn">Back</button>
+      <button class="btn primary" id="submitBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+        Request approval & run
+      </button>
+    </div>
+    `;
+  }
+
+  function wireHints(){
+    canvasBody.querySelectorAll('.hint').forEach(h=>{
+      h.addEventListener('click', ()=>{
+        composer.value = h.dataset.send;
+        autosize(composer);
+        sendBtn.disabled = false;
+        // auto send for delight
+        send();
+      });
+    });
+  }
+  function wireS3(){
+    // toggle class
+    canvasBody.querySelectorAll('.toggle').forEach(tg=>{
+      tg.querySelectorAll('button').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          tg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+          b.classList.add('active');
+        });
+      });
+    });
+    // checkboxes
+    canvasBody.querySelectorAll('.check-row').forEach(cr=>{
+      // required items can't toggle
+      if(cr.dataset.chk === 'block-public') return;
+      cr.addEventListener('click', ()=>{
+        const on = cr.classList.toggle('on');
+        const cb = cr.querySelector('.cb');
+        cb.innerHTML = on
+          ? `<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"><path d="m5 12 5 5L20 7"/></svg>`
+          : '';
+      });
+    });
+
+    const nextBtn = canvasBody.querySelector('#nextBtn');
+    if(nextBtn) nextBtn.addEventListener('click', goReview);
+    const cancelBtn = canvasBody.querySelector('#cancelBtn');
+    if(cancelBtn) cancelBtn.addEventListener('click', ()=>{
+      // close tab back to home
+      const tab = tabs.querySelector('[data-tab="s3"]');
+      if(tab) tab.remove();
+      tabs.querySelector('[data-tab="home"]').classList.add('active');
+      canvasBody.innerHTML = homeHTML();
+      wireHints();
+    });
+  }
+
+  function goReview(){
+    const name = document.getElementById('f-name').value || 'acme-analytics-nightly-exports';
+    const cls = document.querySelector('[data-field="class"] .active')?.dataset.v || 'standard';
+    const versioning = !!document.querySelector('[data-chk="versioning"].on');
+    const lifecycle = !!document.querySelector('[data-chk="lifecycle"].on');
+
+    // update steps
+    const stepDetails = document.getElementById('stepDetails');
+    const stepReview = document.getElementById('stepReview');
+    stepDetails.classList.remove('current'); stepDetails.classList.add('done');
+    stepDetails.querySelector('.n').innerHTML = `<svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="m5 12 5 5L20 7"/></svg>`;
+    const bars = document.querySelectorAll('.step-bar');
+    bars[1].classList.add('done');
+    stepReview.classList.add('current');
+
+    const panel = document.getElementById('stepPanel');
+    panel.innerHTML = reviewHTML({
+      name, cls: cls==='standard'?'S3 Standard':cls==='ia'?'Infrequent Access':'Glacier',
+      versioning, lifecycle
+    });
+    panel.classList.remove('reveal');
+    requestAnimationFrame(()=>panel.classList.add('reveal'));
+
+    panel.querySelector('#backBtn').addEventListener('click', ()=>{
+      // restore details
+      stepReview.classList.remove('current');
+      stepDetails.classList.remove('done'); stepDetails.classList.add('current');
+      stepDetails.querySelector('.n').textContent = '2';
+      bars[1].classList.remove('done');
+      panel.innerHTML = detailsHTML();
+      wireS3();
+    });
+    panel.querySelector('#cancelBtn').addEventListener('click', ()=>{
+      const tab = tabs.querySelector('[data-tab="s3"]');
+      if(tab) tab.remove();
+      tabs.querySelector('[data-tab="home"]').classList.add('active');
+      canvasBody.innerHTML = homeHTML();
+      wireHints();
+    });
+    panel.querySelector('#submitBtn').addEventListener('click', ()=>{
+      submitApproval();
+    });
+  }
+
+  function submitApproval(){
+    // add agent message about approval routing
+    const a = addAgent();
+    setAgentName(a, 'just now');
+    setAgentHTML(a, `
+      <p>Submitted. Approval routed to <b>Jordan Park</b> (on-call platform lead) via Slack.</p>
+      <div class="tool-call">
+        <div class="tc-head">
+          <span class="ico">
+            <svg class="ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          <span>Approval workflow · prod.create-resource</span>
+          <span class="sp"></span>
+          <span class="dur">pending</span>
+        </div>
+        <div class="tc-body">
+          <div class="row"><span class="k">run id</span><span class="v">run_01JD9Y7B6N</span></div>
+          <div class="row"><span class="k">approver</span><span class="v">jordan.park@acme.com</span></div>
+          <div class="row"><span class="k">slack</span><span class="v">#platform-approvals · notified 3s ago</span></div>
+          <div class="row"><span class="k">sla</span><span class="v">&lt; 5 min · auto-escalate to @platform-leads</span></div>
+        </div>
+      </div>
+    `);
+
+    // update canvas state
+    const panel = document.getElementById('stepPanel');
+    if(panel){
+      panel.innerHTML = `
+        <div style="padding:44px 24px; text-align:center;">
+          <div style="width:56px;height:56px;border-radius:14px;background:var(--accent-3);color:var(--accent);display:grid;place-items:center;margin:0 auto 14px;border:1px solid var(--accent-2);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M22 4 12 14.01l-3-3"/></svg>
+          </div>
+          <div style="font-family:var(--f-display); font-size:26px; color:var(--ink); letter-spacing:-0.01em;">Awaiting approval</div>
+          <div style="color:var(--steel); max-width:380px;margin:6px auto 0;font-size:13px;">
+            Jordan Park will receive a Slack prompt with the full diff and trace link. You'll see the result here and in your run history.
+          </div>
+          <div style="margin-top:18px; display:inline-flex; gap:8px;">
+            <button class="btn ghost">View run →</button>
+            <button class="btn">Notify me in Slack</button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // ——— send pipeline ———
+  function send(){
+    const text = composer.value.trim();
+    if(!text) return;
+    addYou(text);
+    composer.value = '';
+    autosize(composer);
+    sendBtn.disabled = true;
+
+    // Route: anything containing "s3" or "bucket" → s3 flow; otherwise generic response
+    const s3 = /s3|bucket|storage/i.test(text);
+    if(s3){
+      runS3Flow(text);
+    } else {
+      runGeneric(text);
+    }
+  }
+
+  async function runGeneric(text){
+    const a = addAgent();
+    setAgentTyping(a, true);
+    await typeThen(600, ()=>{});
+    setAgentName(a, 'just now');
+    setAgentHTML(a, `
+      <p>I matched two lamps for that request — want me to open one?</p>
+      <div class="suggests">
+        <button class="suggest" data-send="Create a private S3 bucket for nightly analytics exports.">Try the S3 demo instead</button>
+      </div>
+    `);
+    a.querySelectorAll('.suggest').forEach(s=>{
+      s.addEventListener('click', ()=>{
+        composer.value = s.dataset.send;
+        autosize(composer);
+        sendBtn.disabled = false;
+        send();
+      });
+    });
+  }
+
+  sendBtn.addEventListener('click', send);
+
+  // ——— Marketplace view ———
+  const LAMPS = [
+    // featured (first two used)
+    { id:'pd', name:'PagerDuty Incident Triage', vendor:'pagerduty · third-party', verified:true, cat:'observability',
+      bg:'linear-gradient(135deg,#FEE2E2,#FCA5A5)', fg:'#991B1B', icon:'PD',
+      desc:'Receive alerts, ack/resolve incidents, and kick off runbooks — all from the cockpit.',
+      tags:['incidents','on-call','slack'], installs:'2.1k', enabled:true, featured:true, new:false,
+      ribbon:'EDITOR\'S PICK', glow:'rgba(220,38,38,.10)' },
+    { id:'gl', name:'GitLab Pipelines', vendor:'acme · first-party', verified:true, cat:'ci',
+      bg:'linear-gradient(135deg,#FEF3C7,#FCD34D)', fg:'#92400E', icon:'GL',
+      desc:'Inspect pipeline status, retry failed jobs, and approve prod deployments across every project.',
+      tags:['ci/cd','deploys','gitlab'], installs:'3.8k', enabled:true, featured:true, new:false,
+      ribbon:'FIRST-PARTY', glow:'rgba(146,64,14,.08)' },
+    // grid
+    { id:'s3', name:'AWS Storage', vendor:'acme · first-party', verified:true, cat:'aws',
+      bg:'linear-gradient(135deg,#FEF3C7,#FDE68A)', fg:'#92400E', icon:'S3',
+      desc:'Buckets, lifecycle rules, cross-region replication, and signed URLs — with Acme guardrails.',
+      tags:['s3','glacier','kms'], installs:'5.4k', enabled:true, new:false },
+    { id:'vault', name:'Vault Secrets', vendor:'hashicorp · third-party', verified:true, cat:'security',
+      bg:'linear-gradient(135deg,#E0E7FF,#A5B4FC)', fg:'#3730A3', icon:'HV',
+      desc:'Rotate secrets, issue short-lived DB creds, and scope access to a single run.',
+      tags:['secrets','rotation'], installs:'1.9k', enabled:true, new:false },
+    { id:'dd', name:'Datadog Metrics', vendor:'datadog · third-party', verified:true, cat:'observability',
+      bg:'linear-gradient(135deg,#F5D0FE,#E879F9)', fg:'#86198F', icon:'DD',
+      desc:'Query dashboards, pull SLOs into chat, and attach live charts to any run record.',
+      tags:['metrics','slo','dashboards'], installs:'2.6k', enabled:false, new:false },
+    { id:'k8s', name:'Kubernetes Ops', vendor:'acme · first-party', verified:true, cat:'aws',
+      bg:'linear-gradient(135deg,#DBEAFE,#93C5FD)', fg:'#1E40AF', icon:'K8',
+      desc:'Scale deployments, tail pod logs, and run kubectl with guardrails and audit.',
+      tags:['eks','pods','scale'], installs:'3.1k', enabled:true, new:false },
+    { id:'jira', name:'Jira Sync', vendor:'atlassian · third-party', verified:true, cat:'internal',
+      bg:'linear-gradient(135deg,#CCFBF1,#5EEAD4)', fg:'#115E59', icon:'JI',
+      desc:'Open tickets from runs, link incidents, and post status updates back to threads.',
+      tags:['tickets','status'], installs:'1.2k', enabled:false, new:false },
+    { id:'cost', name:'Cloud Cost Guardian', vendor:'acme-finops · internal', verified:false, cat:'internal',
+      bg:'linear-gradient(135deg,#DCFCE7,#86EFAC)', fg:'#166534', icon:'$',
+      desc:'Estimate, flag, and route any resource request that exceeds the team\'s monthly budget.',
+      tags:['finops','budget','internal'], installs:'612', enabled:true, new:true },
+    { id:'pr', name:'GitHub PR Helper', vendor:'github · third-party', verified:true, cat:'ci',
+      bg:'linear-gradient(135deg,#E5E7EB,#9CA3AF)', fg:'#111827', icon:'GH',
+      desc:'Summarize PRs, request reviewers, and run merge-queue checks from chat.',
+      tags:['prs','reviews'], installs:'4.0k', enabled:true, new:false },
+    { id:'sg', name:'SecurityGate', vendor:'acme-sec · internal', verified:true, cat:'security',
+      bg:'linear-gradient(135deg,#FEE2E2,#FECACA)', fg:'#991B1B', icon:'SG',
+      desc:'Policy-as-code evaluation for every run. Blocks unsafe actions before the bridge executes.',
+      tags:['policy','guardrails'], installs:'1.0k', enabled:true, new:true },
+    { id:'tf', name:'Terraform Plans', vendor:'hashicorp · third-party', verified:true, cat:'aws',
+      bg:'linear-gradient(135deg,#EDE9FE,#C4B5FD)', fg:'#5B21B6', icon:'TF',
+      desc:'Generate and review plans, apply with approval, and rollback with one command.',
+      tags:['iac','plan','apply'], installs:'2.3k', enabled:false, new:false },
+    { id:'sf', name:'Snowflake Warehouse', vendor:'snowflake · third-party', verified:true, cat:'data',
+      bg:'linear-gradient(135deg,#E0F2FE,#7DD3FC)', fg:'#075985', icon:'SF',
+      desc:'Resize warehouses, pause/resume, and audit long-running queries from chat.',
+      tags:['warehouse','cost'], installs:'840', enabled:false, new:false },
+  ];
+
+  const CATS = [
+    { id:'all', label:'All lamps' },
+    { id:'featured', label:'Featured' },
+    { id:'aws', label:'Cloud & infra' },
+    { id:'ci', label:'CI / CD' },
+    { id:'observability', label:'Observability' },
+    { id:'security', label:'Security' },
+    { id:'data', label:'Data' },
+    { id:'internal', label:'Internal' },
+  ];
+
+  let marketState = { cat:'all', q:'' };
+
+  function marketHTML(){
+    const counts = {};
+    LAMPS.forEach(l => { counts[l.cat] = (counts[l.cat]||0)+1; });
+    const featured = LAMPS.filter(l=>l.featured);
+    const total = LAMPS.length;
+    const enabled = LAMPS.filter(l=>l.enabled).length;
+
+    const cats = CATS.map(c => {
+      const n = c.id==='all' ? total : c.id==='featured' ? featured.length : (counts[c.id]||0);
+      return `<div class="cat ${marketState.cat===c.id?'on':''}" data-cat="${c.id}"><span class="sw" style="background:${catColor(c.id)}"></span>${c.label}<span class="c">${n}</span></div>`;
+    }).join('');
+
+    return `
+    <div class="market">
+      <div class="market-head">
+        <div class="title-block">
+          <div class="ttl">GenieLamp<br/><em>Marketplace</em></div>
+          <div class="sub">Discover and enable tools for your organization. Every lamp runs behind the Application Bridge with full audit and approval controls.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="market-search">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="mktQ" placeholder="Search 182 lamps…" value="${marketState.q}" />
+          <span class="kbd">/</span>
+        </div>
+      </div>
+
+      <div class="market-stats">
+        <div class="mstat"><div class="n">${total}</div><div class="l">available lamps</div></div>
+        <div class="mstat"><div class="n">${enabled}</div><div class="l"><span class="ok">●</span> enabled in prod</div></div>
+        <div class="mstat"><div class="n">3</div><div class="l">new this week</div></div>
+        <div class="mstat"><div class="n">7</div><div class="l">awaiting review</div></div>
+      </div>
+
+      <div class="market-layout">
+        <aside class="market-side">
+          <div class="slbl">Categories</div>
+          ${cats}
+        </aside>
+        <div class="market-main">
+          ${marketState.cat==='all' && !marketState.q ? featuredHTML(featured) : ''}
+
+          <div class="section-h">
+            <div class="t">${sectionTitle()}</div>
+            <div class="c">${filteredLamps().length} results</div>
+            <div class="sp"></div>
+            <div class="sort">most used ↓</div>
+          </div>
+          <div class="cards">
+            ${filteredLamps().map(cardHTML).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+    `;
+  }
+
+  function sectionTitle(){
+    if(marketState.q) return `Results for “${marketState.q}”`;
+    const c = CATS.find(x=>x.id===marketState.cat);
+    return c ? c.label : 'All lamps';
+  }
+
+  function filteredLamps(){
+    let list = LAMPS;
+    if(marketState.cat==='featured') list = list.filter(l=>l.featured);
+    else if(marketState.cat!=='all') list = list.filter(l=>l.cat===marketState.cat);
+    if(marketState.q){
+      const q = marketState.q.toLowerCase();
+      list = list.filter(l => (l.name+' '+l.desc+' '+l.tags.join(' ')).toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  function catColor(id){
+    return ({
+      all:'var(--mute-2)', featured:'var(--accent)',
+      aws:'#F59E0B', ci:'#10B981', observability:'#F472B6',
+      security:'#EF4444', data:'#38BDF8', internal:'#64748B'
+    })[id] || 'var(--mute-2)';
+  }
+
+  function featuredHTML(list){
+    return `
+      <div class="section-h" style="margin-top:0">
+        <div class="t">Featured</div>
+        <div class="c">curated by the platform team</div>
+      </div>
+      <div class="featured">
+        ${list.map(l=>`
+          <div class="feat" data-lamp="${l.id}" style="--feat-glow:${l.glow}">
+            <span class="ribbon">${l.ribbon}</span>
+            <div class="fh">
+              <div class="icon" style="background:${l.bg};color:${l.fg}">${l.icon}</div>
+              <div class="meta">
+                <div class="t">${l.name}</div>
+                <div class="s">${l.vendor} · ${l.installs} installs</div>
+              </div>
+            </div>
+            <div class="desc">${l.desc}</div>
+            <div class="ffoot">
+              ${l.tags.map(t=>`<span class="tag">#${t}</span>`).join(' ')}
+              <span class="spacer"></span>
+              <button class="btn-sm ${l.enabled?'enabled-btn':'primary'}">${l.enabled?'✓ enabled':'Enable'}</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function cardHTML(l){
+    const chk = l.verified ? `<span class="chk" title="verified"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="m5 12 5 5L20 7"/></svg></span>` : '';
+    const newBadge = l.new ? `<span class="tg" style="color:var(--accent); border-color:var(--accent-2); background:var(--accent-3);">NEW</span>` : '';
+    return `
+      <div class="card" data-lamp="${l.id}">
+        <div class="ch">
+          <div class="icon" style="background:${l.bg};color:${l.fg}">${l.icon}</div>
+          <div class="meta">
+            <div class="t">${l.name} ${chk}</div>
+            <div class="s">${l.vendor}</div>
+          </div>
+        </div>
+        <div class="desc">${l.desc}</div>
+        <div class="tags">
+          ${newBadge}
+          ${l.tags.slice(0,3).map(t=>`<span class="tg">${t}</span>`).join('')}
+        </div>
+        <div class="cfoot">
+          ${l.enabled
+            ? `<span class="enabled"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"><path d="m5 12 5 5L20 7"/></svg>enabled</span>`
+            : `<span>${l.installs} installs</span>`}
+          <span class="sp"></span>
+          <button class="btn-sm ${l.enabled?'enabled-btn':'primary'}" data-enable="${l.id}">${l.enabled?'Manage':'Enable'}</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function showMarket(){
+    // swap rail active
+    document.querySelectorAll('.rail-btn').forEach(b=>b.classList.remove('active'));
+    const rb = document.getElementById('railMarket'); if(rb) rb.classList.add('active');
+
+    // switch canvas tab to marketplace
+    tabs.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    let mkTab = tabs.querySelector('[data-tab="market"]');
+    if(!mkTab){
+      mkTab = document.createElement('div');
+      mkTab.className = 'tab active';
+      mkTab.dataset.tab = 'market';
+      mkTab.innerHTML = `<span class="swatch" style="background:var(--accent)"></span>Marketplace
+        <span class="dotclose" title="Close">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </span>`;
+      tabs.appendChild(mkTab);
+      mkTab.addEventListener('click', (e)=>{
+        if(e.target.closest('.dotclose')){
+          mkTab.remove();
+          goHome();
+          return;
+        }
+        tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        mkTab.classList.add('active');
+        renderMarket();
+      });
+    } else {
+      mkTab.classList.add('active');
+    }
+    renderMarket();
+  }
+
+  function renderMarket(){
+    canvasBody.innerHTML = marketHTML();
+    canvasBody.querySelector('.market').classList.add('reveal');
+    wireMarket();
+  }
+
+  function wireMarket(){
+    canvasBody.querySelectorAll('.cat').forEach(c=>{
+      c.addEventListener('click', ()=>{
+        marketState.cat = c.dataset.cat;
+        renderMarket();
+      });
+    });
+    const q = canvasBody.querySelector('#mktQ');
+    if(q){
+      q.addEventListener('input', ()=>{
+        marketState.q = q.value;
+        // re-render but keep input focus
+        const pos = q.selectionStart;
+        renderMarket();
+        const nq = canvasBody.querySelector('#mktQ');
+        if(nq){ nq.focus(); nq.setSelectionRange(pos, pos); }
+      });
+    }
+    canvasBody.querySelectorAll('[data-enable]').forEach(b=>{
+      b.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const id = b.dataset.enable;
+        const lamp = LAMPS.find(l=>l.id===id);
+        if(!lamp) return;
+        lamp.enabled = !lamp.enabled;
+        renderMarket();
+      });
+    });
+    canvasBody.querySelectorAll('.card, .feat').forEach(c=>{
+      c.addEventListener('click', ()=>{
+        const id = c.dataset.lamp;
+        if(id === 's3'){
+          // swap to canvas, open s3
+          goHome(true);
+          setTimeout(openS3Lamp, 10);
+        }
+      });
+    });
+  }
+
+  function goHome(keepRailActive){
+    if(!keepRailActive){
+      document.querySelectorAll('.rail-btn').forEach(b=>b.classList.remove('active'));
+      const rc = document.getElementById('railChat'); if(rc) rc.classList.add('active');
+    } else {
+      document.querySelectorAll('.rail-btn').forEach(b=>b.classList.remove('active'));
+      const rc = document.getElementById('railChat'); if(rc) rc.classList.add('active');
+    }
+    const mk = tabs.querySelector('[data-tab="market"]'); if(mk) mk.remove();
+    tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    const home = tabs.querySelector('[data-tab="home"]'); if(home) home.classList.add('active');
+    canvasBody.innerHTML = homeHTML();
+    wireHints();
+  }
+
+  // Rail wiring
+  const railMarket = document.getElementById('railMarket');
+  if(railMarket) railMarket.addEventListener('click', showMarket);
+  const railChat = document.getElementById('railChat');
+  if(railChat) railChat.addEventListener('click', ()=>goHome());
+
+  // Pinned quick-actions
+  document.querySelectorAll('#pins .pin').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      if(p.classList.contains('s3')){
+        composer.value = 'Create an S3 bucket for nightly analytics exports.';
+        autosize(composer);
+        sendBtn.disabled = false;
+        send();
+      }
+    });
+  });
+
+  wireHints();
+
+  // ——— Seed the thread with a friendly greeting ———
+  (function seed(){
+    const a = addAgent();
+    setAgentName(a, '9:14 am');
+    setAgentHTML(a, `
+      <p>Morning, Maya. Your workspace is connected to <code>prod-us-east-1</code>. You have <b>12 lamps</b> enabled and one open approval from last night.</p>
+      <p style="color:var(--steel); font-size:12.5px; margin-top:8px;">Try one of the shortcuts on the right, or just tell me what you need.</p>
+    `);
+  })();
+
+  autosize(composer);
+})();
+</script>
+</body>
+</html>
