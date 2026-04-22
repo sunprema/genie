@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lamp
+  id="aws.s3.create-bucket"
+  version="1.0"
+  category="storage"
+  vendor="aws">
+
+  <meta>
+    <title>AWS S3 Bucket Creator</title>
+    <description>Create and configure an S3 bucket with access controls, versioning, and encryption. Requires approval before provisioning.</description>
+    <icon>aws-s3</icon>
+    <tags>aws,storage,s3,bucket</tags>
+    <requires-approval>true</requires-approval>
+    <approval-policy>default</approval-policy>
+    <destructive>false</destructive>
+    <audit>true</audit>
+    <base-url>https://api.partner.com/genie</base-url>
+    <auth-scheme>bearer</auth-scheme>
+    <timeout-ms>10000</timeout-ms>
+  </meta>
+
+  <endpoints>
+    <endpoint
+      id="load_regions"
+      method="GET"
+      path="/aws/regions"
+      trigger="on-load"
+      fills-field="region"/>
+    <endpoint
+      id="create_bucket"
+      method="POST"
+      path="/aws/s3/buckets"
+      trigger="on-submit"
+      action-id="submit_create"
+      timeout-ms="30000"/>
+    <endpoint
+      id="poll_status"
+      method="GET"
+      path="/aws/s3/buckets/{bucket_name}/status"
+      trigger="on-complete"
+      poll-interval-ms="2000"
+      poll-until="status=ready|status=failed"
+      timeout-ms="60000"/>
+  </endpoints>
+
+  <ui>
+    <form
+      aria-label="Create S3 Bucket"
+      aria-describedby="form-description">
+
+      <description id="form-description">
+        Create a new Amazon S3 bucket with configurable access controls, versioning, and encryption settings.
+      </description>
+
+      <field
+        id="region"
+        type="select"
+        label="AWS Region"
+        aria-label="AWS region where the bucket will be created"
+        aria-describedby="hint-region"
+        genie-fill="from-context"
+        required="true"
+        options-from="load_regions"
+        options-value-key="code"
+        options-label-key="name"/>
+      <hint id="hint-region">Select the AWS region closest to your users for best performance.</hint>
+
+      <field
+        id="bucket_name"
+        type="text"
+        label="Bucket Name"
+        aria-label="S3 bucket name, must be globally unique, lowercase letters, numbers, and hyphens only, 3-63 characters"
+        aria-describedby="hint-bucket-name"
+        genie-fill="infer"
+        required="true"
+        placeholder="my-bucket-name"
+        pattern="^[a-z0-9][a-z0-9\-]{1,61}[a-z0-9]$"
+        max-length="63"/>
+      <hint id="hint-bucket-name">Bucket names must be globally unique across all AWS accounts.</hint>
+
+      <field
+        id="access"
+        type="select"
+        label="Access Control"
+        aria-label="S3 bucket access control, whether the bucket is private or publicly readable"
+        genie-fill="infer"
+        required="true"
+        default="private">
+        <option value="private" label="Private" description="Only the bucket owner has access"/>
+        <option value="public-read" label="Public Read" description="Anyone can read objects"/>
+        <option value="authenticated-read" label="Authenticated Read" description="Authenticated AWS users can read"/>
+      </field>
+
+      <field
+        id="versioning"
+        type="toggle"
+        label="Enable Versioning"
+        aria-label="Enable S3 bucket versioning to keep multiple versions of each object"
+        genie-fill="infer"
+        default="false"/>
+
+      <field
+        id="org_id"
+        type="hidden"
+        label="Organisation ID"
+        aria-label="Organisation identifier, set automatically from session context"
+        genie-fill="from-context"/>
+
+      <group
+        id="advanced_config"
+        label="Advanced Configuration"
+        aria-label="Advanced bucket configuration options"
+        collapsible="true">
+
+        <field
+          id="encryption_type"
+          type="radio"
+          label="Encryption Type"
+          aria-label="Server-side encryption type for objects stored in this bucket"
+          genie-fill="none"
+          default="SSE-S3">
+          <option value="SSE-S3" label="SSE-S3" description="Amazon S3 managed keys"/>
+          <option value="SSE-KMS" label="SSE-KMS" description="AWS Key Management Service"/>
+          <option value="none" label="None" description="No server-side encryption"/>
+        </field>
+
+        <field
+          id="kms_key_id"
+          type="text"
+          label="KMS Key ID"
+          aria-label="AWS KMS key ARN or alias for SSE-KMS encryption, required when encryption type is SSE-KMS"
+          genie-fill="none"
+          placeholder="arn:aws:kms:us-east-1:123456789012:key/..."
+          depends-on="encryption_type"
+          depends-on-value="SSE-KMS"
+          depends-on-behavior="show"/>
+
+        <field
+          id="storage_class"
+          type="select"
+          label="Storage Class"
+          aria-label="S3 storage class that determines pricing and availability characteristics"
+          genie-fill="none"
+          default="STANDARD">
+          <option value="STANDARD" label="Standard" description="Frequently accessed data"/>
+          <option value="STANDARD_IA" label="Standard-IA" description="Infrequently accessed data"/>
+          <option value="GLACIER" label="Glacier" description="Long-term archival"/>
+        </field>
+
+        <field
+          id="expiry_days"
+          type="number"
+          label="Object Expiry Days"
+          aria-label="Number of days after which objects in this bucket will be automatically deleted, 0 means no expiry"
+          genie-fill="none"
+          default="0"
+          min="0"
+          max="3650"
+          step="1"/>
+
+      </group>
+
+    </form>
+  </ui>
+
+  <actions>
+    <action
+      id="submit_create"
+      label="Create Bucket"
+      aria-label="Submit form to create the S3 bucket with the configured settings"
+      style="primary"
+      endpoint-id="create_bucket"
+      destructive="false"
+      behavior="submit"/>
+    <action
+      id="reset"
+      label="Reset"
+      aria-label="Reset all form fields to their default values"
+      style="secondary"
+      behavior="reset-form"/>
+  </actions>
+
+  <status-templates>
+    <template state="submitting">
+      <field type="spinner"
+        label="Creating bucket..."
+        aria-label="Creating S3 bucket {bucket_name}, please wait"
+        style="info"/>
+    </template>
+
+    <template state="pending-approval">
+      <field type="banner"
+        label="Pending Approval"
+        aria-label="Bucket creation for {bucket_name} in {region} is pending approval"
+        style="warning"
+        value="Waiting for approval to create bucket {bucket_name}"/>
+    </template>
+
+    <template state="ready">
+      <field type="banner"
+        label="Bucket Created"
+        aria-label="S3 bucket {bucket_name} was successfully created in {region}"
+        style="success"
+        value="Bucket {bucket_name} created successfully"/>
+      <field type="link"
+        label="Open in Console"
+        aria-label="Open S3 bucket {bucket_name} in the AWS Management Console"
+        href="{console_url}"
+        value="View in AWS Console"/>
+    </template>
+
+    <template state="failed">
+      <field type="banner"
+        label="Creation Failed"
+        aria-label="S3 bucket creation failed: {error_message}"
+        style="error"
+        value="{error_message}"/>
+    </template>
+  </status-templates>
+
+</lamp>

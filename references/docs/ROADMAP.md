@@ -69,49 +69,49 @@
 
 ### Data structures
 
-- [ ] Define `Genie.Lamp.LampDefinition` struct (all fields per `REQUIREMENTS.md §6.1`)
-- [ ] Define `Genie.Lamp.MetaDef` struct
-- [ ] Define `Genie.Lamp.FieldDef` struct with `value: nil` default
-- [ ] Define `Genie.Lamp.OptionDef` struct
-- [ ] Define `Genie.Lamp.ActionDef` struct
-- [ ] Define `Genie.Lamp.EndpointDef` struct
-- [ ] Define `Genie.Lamp.GroupDef` struct
-- [ ] Define `Genie.Lamp.StatusTemplate` struct
+- [x] Define `Genie.Lamp.LampDefinition` struct (all fields per `REQUIREMENTS.md §6.1`)
+- [x] Define `Genie.Lamp.MetaDef` struct
+- [x] Define `Genie.Lamp.FieldDef` struct with `value: nil` default
+- [x] Define `Genie.Lamp.OptionDef` struct
+- [x] Define `Genie.Lamp.ActionDef` struct
+- [x] Define `Genie.Lamp.EndpointDef` struct
+- [x] Define `Genie.Lamp.GroupDef` struct
+- [x] Define `Genie.Lamp.StatusTemplate` struct
 
 ### Parser
 
-- [ ] Implement `Genie.Lamp.LampParser.parse/1` using Saxy SAX callbacks
-- [ ] Handle `<lamp>` element — extract `id`, `version`, `category`, `vendor`
-- [ ] Handle `<meta>` child elements — `<title>`, `<description>`, `<icon>`, `<tags>`, `<requires-approval>`, `<approval-policy>`, `<destructive>`, `<audit>`, `<base-url>`, `<auth-scheme>`, `<timeout-ms>`
-- [ ] Handle `<endpoint>` elements — all attributes per schema
-- [ ] Handle `<field>` elements — all types and all attributes per schema
-- [ ] Handle `<option>` elements — `value`, `label`, `description`
-- [ ] Handle `<hint>` elements — link to parent field by `aria-describedby`
-- [ ] Handle `<group>` elements — resolve child fields into `GroupDef`, record `group_id` on each child `FieldDef`
-- [ ] Handle `<action>` elements
-- [ ] Handle `<template>` elements and their child `<field>` elements
-- [ ] Parse `genie-fill` attribute: `"from-context"` → `:from_context`, `"infer"` → `:infer`, `"none"` → `:none`
-- [ ] Parse `type` attribute into atom: `:text`, `:textarea`, `:select`, `:radio`, `:toggle`, `:number`, `:date`, `:checkbox_group`, `:hidden`
+- [x] Implement `Genie.Lamp.LampParser.parse/1` using Saxy SAX callbacks
+- [x] Handle `<lamp>` element — extract `id`, `version`, `category`, `vendor`
+- [x] Handle `<meta>` child elements — `<title>`, `<description>`, `<icon>`, `<tags>`, `<requires-approval>`, `<approval-policy>`, `<destructive>`, `<audit>`, `<base-url>`, `<auth-scheme>`, `<timeout-ms>`
+- [x] Handle `<endpoint>` elements — all attributes per schema
+- [x] Handle `<field>` elements — all types and all attributes per schema
+- [x] Handle `<option>` elements — `value`, `label`, `description`
+- [x] Handle `<hint>` elements — link to parent field by `aria-describedby`
+- [x] Handle `<group>` elements — resolve child fields into `GroupDef`, record `group_id` on each child `FieldDef`
+- [x] Handle `<action>` elements
+- [x] Handle `<template>` elements and their child `<field>` elements
+- [x] Parse `genie-fill` attribute: `"from-context"` → `:from_context`, `"infer"` → `:infer`, `"none"` → `:none`
+- [x] Parse `type` attribute into atom: `:text`, `:textarea`, `:select`, `:radio`, `:toggle`, `:number`, `:date`, `:checkbox_group`, `:hidden`
 
 ### Validation
 
-- [ ] Validate lamp `id` is present and matches pattern `{vendor}.{service}.{action}`
-- [ ] Validate at least one field is defined
-- [ ] Validate all `endpoint-id` references in `<action>` exist in `<endpoints>`
-- [ ] Validate all `options-from` references exist in `<endpoints>`
-- [ ] Validate all `depends-on` field IDs exist in the same form
-- [ ] Validate `aria-label` is present on every `<field>` and every `<action>`
-- [ ] Validate `aria-label` is present on every `<field>` inside `<status-templates>`
-- [ ] Return `{:error, reason}` with a descriptive message for every validation failure
+- [x] Validate lamp `id` is present and matches pattern `{vendor}.{service}.{action}`
+- [x] Validate at least one field is defined
+- [x] Validate all `endpoint-id` references in `<action>` exist in `<endpoints>`
+- [x] Validate all `options-from` references exist in `<endpoints>`
+- [x] Validate all `depends-on` field IDs exist in the same form
+- [x] Validate `aria-label` is present on every `<field>` and every `<action>`
+- [x] Validate `aria-label` is present on every `<field>` inside `<status-templates>`
+- [x] Return `{:error, reason}` with a descriptive message for every validation failure
 
 ### Tests
 
-- [ ] Test `parse/1` against `priv/lamps/aws_s3_create_bucket.xml` — assert all fields populated correctly
-- [ ] Test each field type is parsed with correct struct fields
-- [ ] Test `genie-fill` values map to correct atoms
-- [ ] Test all validation rules with invalid XML fixtures — one test per rule
-- [ ] Test that `depends-on` attributes are preserved in `FieldDef`
-- [ ] Test that `<group>` correctly sets `group_id` on child fields
+- [x] Test `parse/1` against `priv/lamps/aws_s3_create_bucket.xml` — assert all fields populated correctly
+- [x] Test each field type is parsed with correct struct fields
+- [x] Test `genie-fill` values map to correct atoms
+- [x] Test all validation rules with invalid XML fixtures — one test per rule
+- [x] Test that `depends-on` attributes are preserved in `FieldDef`
+- [x] Test that `<group>` correctly sets `group_id` on child fields
 
 ---
 
@@ -447,7 +447,7 @@
 | ----- | -------------------------------- | ------ |
 | 0     | Project Scaffold                 | `[ ]`  |
 | 1     | Ash Domain Foundation            | `[x]`  |
-| 2     | GenieLamp XML Parser             | `[ ]`  |
+| 2     | GenieLamp XML Parser             | `[x]`  |
 | 3     | GenieLamp Registry               | `[ ]`  |
 | 4     | GenieLamp Renderer               | `[ ]`  |
 | 5     | Application Bridge               | `[ ]`  |
