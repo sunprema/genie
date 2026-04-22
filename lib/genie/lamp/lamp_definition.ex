@@ -1,4 +1,6 @@
 defmodule Genie.Lamp.LampDefinition do
+  @type t :: %__MODULE__{}
+
   defstruct [
     :id,
     :version,

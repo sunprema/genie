@@ -64,7 +64,7 @@ config :spark,
 config :genie,
   ecto_repos: [Genie.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Genie.Accounts, Genie.Conversation, Genie.Audit]
+  ash_domains: [Genie.Accounts, Genie.Conversation, Genie.Audit, Genie.Lamp]
 
 # Configure the endpoint
 config :genie, GenieWeb.Endpoint,

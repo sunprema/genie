@@ -27,7 +27,13 @@ defmodule Genie.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Genie.Supervisor]
-    Supervisor.start_link(children, opts)
+    result = Supervisor.start_link(children, opts)
+
+    if Application.get_env(:genie, :load_lamps_on_startup, false) do
+      Task.start(fn -> Genie.Lamp.Loader.load_all() end)
+    end
+
+    result
   end
 
   # Tell Phoenix to update the endpoint configuration

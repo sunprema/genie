@@ -119,16 +119,16 @@
 
 > Stores and serves lamp definitions. Internal lamps loaded from `priv/lamps/`. Third-party lamps registered via Ash action.
 
-- [ ] Define `Genie.Lamp.LampRegistry` Ash resource with attributes: `id`, `lamp_id`, `org_id` (nullable — nil means available to all orgs), `xml_source`, `parsed_definition` (`:map` type, stored as JSONB), `enabled`, `inserted_at`, `updated_at`
-- [ ] Write migration for `LampRegistry`
-- [ ] Implement `LampRegistry.register/2` Ash create action — parses XML, validates, stores parsed definition
-- [ ] Implement `LampRegistry.load_active_manifests/1` read action — returns `[%LampDefinition{}]` for a given `org_id`, filtering enabled lamps
-- [ ] Implement `LampRegistry.fetch_lamp/1` — returns `%LampDefinition{}` by `lamp_id`
-- [ ] Write Mix task `mix genie.lamps.load` — reads all XML files from `priv/lamps/`, registers each, reports errors
-- [ ] Run `mix genie.lamps.load` as part of application startup in dev (not prod — use explicit migration step)
-- [ ] Write unit tests for `register/2` — valid XML succeeds, invalid XML returns error with reason
-- [ ] Write unit tests for `load_active_manifests/1` — returns only enabled lamps for the correct org
-- [ ] Write unit test confirming a lamp with an invalid manifest cannot be registered
+- [x] Define `Genie.Lamp.LampRegistry` Ash resource with attributes: `id`, `lamp_id`, `org_id` (nullable — nil means available to all orgs), `xml_source`, `parsed_definition` (`:map` type, stored as JSONB), `enabled`, `inserted_at`, `updated_at`
+- [x] Write migration for `LampRegistry`
+- [x] Implement `LampRegistry.register/2` Ash create action — parses XML, validates, stores parsed definition
+- [x] Implement `LampRegistry.load_active_manifests/1` read action — returns `[%LampDefinition{}]` for a given `org_id`, filtering enabled lamps
+- [x] Implement `LampRegistry.fetch_lamp/1` — returns `%LampDefinition{}` by `lamp_id`
+- [x] Write Mix task `mix genie.lamps.load` — reads all XML files from `priv/lamps/`, registers each, reports errors
+- [x] Run `mix genie.lamps.load` as part of application startup in dev (not prod — use explicit migration step)
+- [x] Write unit tests for `register/2` — valid XML succeeds, invalid XML returns error with reason
+- [x] Write unit tests for `load_active_manifests/1` — returns only enabled lamps for the correct org
+- [x] Write unit test confirming a lamp with an invalid manifest cannot be registered
 
 ---
 
@@ -448,7 +448,7 @@
 | 0     | Project Scaffold                 | `[ ]`  |
 | 1     | Ash Domain Foundation            | `[x]`  |
 | 2     | GenieLamp XML Parser             | `[x]`  |
-| 3     | GenieLamp Registry               | `[ ]`  |
+| 3     | GenieLamp Registry               | `[x]`  |
 | 4     | GenieLamp Renderer               | `[ ]`  |
 | 5     | Application Bridge               | `[ ]`  |
 | 6     | Conductor — Action Validation    | `[ ]`  |

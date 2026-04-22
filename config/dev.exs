@@ -70,7 +70,10 @@ config :genie, GenieWeb.Endpoint,
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :genie, dev_routes: true, token_signing_secret: "i3Pnv8Ed1K8iImBwk07WcJiPAY883yt0"
+config :genie,
+  dev_routes: true,
+  token_signing_secret: "i3Pnv8Ed1K8iImBwk07WcJiPAY883yt0",
+  load_lamps_on_startup: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
