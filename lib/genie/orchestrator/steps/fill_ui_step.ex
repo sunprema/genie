@@ -9,7 +9,8 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
   """
   use Reactor.Step
 
-  alias Genie.Lamp.{LampDefinition, LampRegistry, LampRenderer}
+  alias Genie.Bridge
+  alias Genie.Lamp.{LampDefinition, LampRegistry, LampRenderer, OptionDef}
   alias Genie.Orchestrator.LlmClient
 
   @impl Reactor.Step
@@ -55,7 +56,7 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
   defp fill_definition(%LampDefinition{fields: fields} = lamp, params, build_context) do
     {context_fields, infer_fields, none_fields} = partition_fields(fields)
 
-    filled_context = fill_from_context(context_fields, params)
+    filled_context = fill_from_context(context_fields, params, lamp)
 
     case fill_infer(infer_fields, build_context) do
       {:ok, infer_values} ->
@@ -81,10 +82,22 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
     {context_fields, infer_fields, none_fields}
   end
 
-  defp fill_from_context(fields, params) do
+  defp fill_from_context(fields, params, lamp) do
     Enum.map(fields, fn field ->
       value = Map.get(params, field.id) || Map.get(params, String.to_atom(field.id))
-      %{field | value: value}
+      field = %{field | value: value}
+
+      if field.options_from do
+        case Bridge.fetch_options(lamp, field) do
+          {:ok, pairs} ->
+            options = Enum.map(pairs, fn {v, l} -> %OptionDef{value: v, label: l} end)
+            %{field | options: options, options_from: nil}
+          _ ->
+            field
+        end
+      else
+        field
+      end
     end)
   end
 

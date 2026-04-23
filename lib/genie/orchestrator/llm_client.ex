@@ -25,7 +25,7 @@ defmodule Genie.Orchestrator.LlmClient do
 
   @spec call(call_request()) :: call_result()
   def call(%{llm_context: llm_context, tools: tools}) do
-    model = Application.get_env(:genie, :llm_model, "anthropic:claude-sonnet-4-6")
+    model = Application.get_env(:genie, :llm_model, "openai:gpt-4o")
 
     case req_llm_module().generate_text(model, llm_context, tools: tools) do
       {:ok, response} -> parse_call_response(response)
@@ -35,7 +35,7 @@ defmodule Genie.Orchestrator.LlmClient do
 
   @spec fill(map()) :: {:ok, map()} | {:error, term()}
   def fill(%{fields: fields, conversation: conversation}) do
-    model = Application.get_env(:genie, :llm_model, "anthropic:claude-sonnet-4-6")
+    model = Application.get_env(:genie, :llm_model, "openai:gpt-4o")
     prompt = build_fill_prompt(fields, conversation)
     schema = build_field_schema(fields)
 

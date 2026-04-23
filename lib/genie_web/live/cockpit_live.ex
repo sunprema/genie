@@ -1,12 +1,14 @@
 defmodule GenieWeb.CockpitLive do
   use GenieWeb, :live_view
 
+  alias Genie.Conversation.Session
   alias Genie.Workers.{OrchestratorWorker, LampActionWorker}
 
   on_mount {GenieWeb.LiveUserAuth, :live_user_required}
 
   def mount(_params, _session, socket) do
-    session_id = Ecto.UUID.generate()
+    user = socket.assigns[:current_user]
+    session_id = create_db_session(user)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
@@ -71,8 +73,14 @@ defmodule GenieWeb.CockpitLive do
     {:noreply, assign(socket, lamp_field_values: lamp_field_values)}
   end
 
-  def handle_event("lamp_field_change", %{"field" => field_id, "value" => value}, socket) do
-    lamp_field_values = Map.put(socket.assigns.lamp_field_values, field_id, value)
+  def handle_event("lamp_field_change", params, socket) do
+    field_values =
+      params
+      |> Map.drop(["_target", "_unused_state", "lamp-id", "phx-trigger-action"])
+      |> Enum.reject(fn {k, _} -> String.starts_with?(k, "_") end)
+      |> Map.new()
+
+    lamp_field_values = Map.merge(socket.assigns.lamp_field_values, field_values)
     {:noreply, assign(socket, lamp_field_values: lamp_field_values)}
   end
 
@@ -140,4 +148,19 @@ defmodule GenieWeb.CockpitLive do
 
   defp format_error(reason) when is_binary(reason), do: reason
   defp format_error(reason), do: inspect(reason)
+
+  defp create_db_session(nil), do: Ecto.UUID.generate()
+
+  defp create_db_session(user) do
+    case Session
+         |> Ash.Changeset.for_create(
+           :create,
+           %{title: "Cockpit session", org_id: user.org_id, user_id: user.id},
+           authorize?: false
+         )
+         |> Ash.create() do
+      {:ok, session} -> session.id
+      {:error, _} -> Ecto.UUID.generate()
+    end
+  end
 end

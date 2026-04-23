@@ -31,6 +31,10 @@ defmodule GenieWeb.Endpoint do
     plug Tidewave
   end
 
+  if Code.ensure_loaded?(LiveAgent) do
+    plug LiveAgent
+  end
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

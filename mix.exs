@@ -117,7 +117,12 @@ defmodule Genie.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:saxy, "~> 1.6"}
+      {:saxy, "~> 1.6"},
+      {:live_agent,
+       if(Mix.env() == :dev and File.dir?("/Volumes/x/projects/elixir_libs/live_agent"),
+         do: [path: "/Volumes/x/projects/elixir_libs/live_agent", override: true, only: :dev],
+         else: [github: "sunprema/live_agent", branch: "main", only: :dev]
+       )}
     ]
   end
 

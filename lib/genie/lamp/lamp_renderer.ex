@@ -192,14 +192,19 @@ defmodule Genie.Lamp.LampRenderer do
       aria-label={@field.aria_label}
       aria-required={to_string(@field.required == true)}
       name={@field.id}>
-      <%= if @field.options_from do %>
-        <option value="">Select...</option>
-      <% else %>
-        <%= for opt <- (@field.options || []) do %>
-          <option value={opt.value} selected={@current_value == opt.value}>
-            <%= opt.label %>
+      <%= cond do %>
+        <% @field.options != [] && @field.options != nil -> %>
+          <%= for opt <- @field.options do %>
+            <option value={opt.value} selected={@current_value == opt.value}>
+              <%= opt.label %>
+            </option>
+          <% end %>
+        <% @current_value != nil -> %>
+          <option value={@current_value} selected>
+            <%= @current_value %>
           </option>
-        <% end %>
+        <% true -> %>
+          <option value="">Select...</option>
       <% end %>
     </select>
     """

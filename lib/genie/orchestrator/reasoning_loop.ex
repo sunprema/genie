@@ -69,6 +69,7 @@ defmodule Genie.Orchestrator.ReasoningLoop do
   step :push_cockpit, PushCockpitStep do
     argument :ui_result, result(:fill_ui)
     argument :session_id, input(:session_id)
+    argument :user_message, input(:user_message)
     argument :actor, input(:actor)
   end
 

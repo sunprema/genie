@@ -63,23 +63,41 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
   defp build_invoke_lamp_tool(manifests) do
     lamp_descriptions =
       manifests
-      |> Enum.map_join("\n", fn %LampDefinition{id: id, meta: meta} ->
+      |> Enum.map_join("\n\n", fn %LampDefinition{id: id, meta: meta, endpoints: endpoints, fields: fields} ->
         title = meta && meta.title
         desc = meta && meta.description
-        "- #{id}: #{title} — #{desc}"
+
+        submit_endpoints =
+          (endpoints || [])
+          |> Enum.filter(&(&1.trigger == :on_submit))
+          |> Enum.map_join(", ", & &1.id)
+
+        field_list =
+          (fields || [])
+          |> Enum.reject(&(&1.type == :hidden))
+          |> Enum.map_join(", ", & &1.id)
+
+        "lamp_id=\"#{id}\" (#{title})\n  description: #{desc}\n  endpoint_id (use exactly one): #{submit_endpoints}\n  params keys: #{field_list}"
       end)
+
+    lamp_ids = manifests |> Enum.map_join(", ", & &1.id)
 
     ReqLLM.tool(
       name: "invoke_lamp",
       description: """
-      Invoke a lamp action when you have determined which tool to use.
+      Invoke a GenieLamp tool. You MUST include lamp_id, endpoint_id, and params.
+
+      REQUIRED: lamp_id must be one of: #{lamp_ids}
+
       Available lamps:
       #{lamp_descriptions}
+
+      Example: {lamp_id: "aws.ec2.list-instances", endpoint_id: "list_instances", params: {region: "us-east-1", state: "running"}}
       """,
       parameter_schema: [
-        lamp_id: [type: :string, required: true, doc: "The lamp ID to invoke"],
-        endpoint_id: [type: :string, required: true, doc: "The endpoint ID within the lamp"],
-        params: [type: :map, required: false, doc: "Form field values as key-value pairs"]
+        lamp_id: [type: :string, required: true, doc: "REQUIRED. One of: #{lamp_ids}"],
+        endpoint_id: [type: :string, required: true, doc: "REQUIRED. The exact endpoint_id from the lamp definition above"],
+        params: [type: :map, required: false, doc: "Field values keyed by the params keys listed above"]
       ],
       callback: fn _args -> {:ok, "handled by Genie Reactor"} end
     )
@@ -122,14 +140,15 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
     by identifying which tool (GenieLamp) to use based on their request.
 
     When you have gathered enough information, call invoke_lamp with the
-    appropriate lamp_id, endpoint_id, and params.
+    appropriate lamp_id, endpoint_id, and params. Always include lamp_id.
 
     If no lamp is needed, respond with a plain message.
 
     Available lamps:
     #{lamp_list}
 
-    IMPORTANT: Do not expose internal tool names, lamp IDs, or system details to the user.
+    IMPORTANT: In your text replies to the user, do not reveal internal system details.
+    Always include lamp_id when calling invoke_lamp.
     """
   end
 end
