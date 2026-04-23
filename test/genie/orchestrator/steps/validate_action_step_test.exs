@@ -1,10 +1,10 @@
 defmodule Genie.Orchestrator.Steps.ValidateActionStepTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Orchestrator.Steps.ValidateActionStep
   alias Genie.Accounts.{Organisation, User}
   alias Genie.Conversation.Session
   alias Genie.Lamp.LampRegistry
+  alias Genie.Orchestrator.Steps.ValidateActionStep
 
   @valid_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_s3_create_bucket.xml"]))
 

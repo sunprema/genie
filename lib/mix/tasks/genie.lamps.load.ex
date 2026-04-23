@@ -1,4 +1,5 @@
 defmodule Mix.Tasks.Genie.Lamps.Load do
+  @moduledoc false
   use Mix.Task
 
   @shortdoc "Loads all lamp XML files from priv/lamps/ into the registry"

@@ -1,4 +1,5 @@
 defmodule Genie.Workers.LampActionWorker do
+  @moduledoc false
   use Oban.Worker, queue: :lamp_actions
 
   alias Genie.Accounts.User
@@ -82,13 +83,7 @@ defmodule Genie.Workers.LampActionWorker do
                actor: actor,
                session_id: session_id
              ) do
-        if lamp.meta && lamp.meta.requires_approval && !demo_actor?(actor) do
-          handle_approval_required(lamp, lamp_action, session_id)
-        else
-          with {:ok, html} <- Conductor.execute(lamp_action) do
-            {:ok, lamp, html}
-          end
-        end
+        maybe_execute_or_approve(lamp, lamp_action, actor, session_id)
       end
 
     case result do
@@ -103,6 +98,17 @@ defmodule Genie.Workers.LampActionWorker do
       {:error, reason} ->
         CockpitLive.push_error(session_id, reason)
         :ok
+    end
+  end
+
+  defp maybe_execute_or_approve(lamp, lamp_action, actor, session_id) do
+    if lamp.meta && lamp.meta.requires_approval && !demo_actor?(actor) do
+      handle_approval_required(lamp, lamp_action, session_id)
+    else
+      case Conductor.execute(lamp_action) do
+        {:ok, html} -> {:ok, lamp, html}
+        error -> error
+      end
     end
   end
 
@@ -152,22 +158,24 @@ defmodule Genie.Workers.LampActionWorker do
       :ok
     else
       Process.sleep(interval_ms)
+      handle_poll_result(lamp, endpoint, params, session_id, conditions, interval_ms, deadline)
+    end
+  end
 
-      case Bridge.execute_tool(%{lamp: lamp, endpoint_id: endpoint.id, params: params, session_id: session_id}) do
-        {:ok, response} ->
-          {:safe, iodata} = LampRenderer.render_status(lamp, response)
-          html = IO.iodata_to_binary(iodata)
-          CockpitLive.push_canvas(session_id, html)
+  defp handle_poll_result(lamp, endpoint, params, session_id, conditions, interval_ms, deadline) do
+    case Bridge.execute_tool(%{lamp: lamp, endpoint_id: endpoint.id, params: params, session_id: session_id}) do
+      {:ok, response} ->
+        {:safe, iodata} = LampRenderer.render_status(lamp, response)
+        CockpitLive.push_canvas(session_id, IO.iodata_to_binary(iodata))
 
-          if poll_condition_met?(response, conditions) do
-            :ok
-          else
-            do_poll(lamp, endpoint, params, session_id, conditions, interval_ms, deadline)
-          end
-
-        {:error, _} ->
+        if poll_condition_met?(response, conditions) do
           :ok
-      end
+        else
+          do_poll(lamp, endpoint, params, session_id, conditions, interval_ms, deadline)
+        end
+
+      {:error, _} ->
+        :ok
     end
   end
 

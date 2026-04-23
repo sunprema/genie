@@ -112,6 +112,10 @@ config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
+config :opentelemetry,
+  resource: %{service: %{name: "genie", version: "0.1.0"}},
+  traces_exporter: :none
+
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 

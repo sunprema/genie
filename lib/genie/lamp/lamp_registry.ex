@@ -1,4 +1,5 @@
 defmodule Genie.Lamp.LampRegistry do
+  @moduledoc false
   use Ash.Resource,
     otp_app: :genie,
     domain: Genie.Lamp,

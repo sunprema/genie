@@ -1,4 +1,5 @@
 defmodule Genie.Conductor.Checks.LampOrgAccess do
+  @moduledoc false
   use Ash.Policy.SimpleCheck
 
   @impl true
@@ -22,6 +23,7 @@ defmodule Genie.Conductor.Checks.LampOrgAccess do
 end
 
 defmodule Genie.Conductor.Checks.HasRequiredRole do
+  @moduledoc false
   use Ash.Policy.SimpleCheck
 
   @impl true

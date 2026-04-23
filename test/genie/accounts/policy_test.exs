@@ -1,7 +1,7 @@
 defmodule Genie.Accounts.PolicyTest do
   use Genie.DataCase, async: true
 
-  alias Genie.Accounts.{Organisation, User, ApiKey}
+  alias Genie.Accounts.{ApiKey, Organisation, User}
 
   # --- helpers ---
 

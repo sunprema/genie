@@ -1,4 +1,5 @@
 defmodule Genie.Accounts.Token do
+  @moduledoc false
   use Ash.Resource,
     otp_app: :genie,
     domain: Genie.Accounts,

@@ -1,4 +1,5 @@
 defmodule Genie.Workers.ApprovalWorker do
+  @moduledoc false
   use Oban.Worker, queue: :approvals
 
   alias Genie.Audit.AuditLog
@@ -57,21 +58,24 @@ defmodule Genie.Workers.ApprovalWorker do
       :ok
     else
       Process.sleep(interval_ms)
+      handle_poll_result(lamp, endpoint, params, session_id, conditions, interval_ms, deadline)
+    end
+  end
 
-      case Genie.Bridge.execute_tool(%{lamp: lamp, endpoint_id: endpoint.id, params: params, session_id: session_id}) do
-        {:ok, response} ->
-          {:safe, iodata} = LampRenderer.render_status(lamp, response)
-          CockpitLive.push_canvas(session_id, IO.iodata_to_binary(iodata))
+  defp handle_poll_result(lamp, endpoint, params, session_id, conditions, interval_ms, deadline) do
+    case Genie.Bridge.execute_tool(%{lamp: lamp, endpoint_id: endpoint.id, params: params, session_id: session_id}) do
+      {:ok, response} ->
+        {:safe, iodata} = LampRenderer.render_status(lamp, response)
+        CockpitLive.push_canvas(session_id, IO.iodata_to_binary(iodata))
 
-          if poll_condition_met?(response, conditions) do
-            :ok
-          else
-            do_poll(lamp, endpoint, params, session_id, conditions, interval_ms, deadline)
-          end
-
-        {:error, _} ->
+        if poll_condition_met?(response, conditions) do
           :ok
-      end
+        else
+          do_poll(lamp, endpoint, params, session_id, conditions, interval_ms, deadline)
+        end
+
+      {:error, _} ->
+        :ok
     end
   end
 

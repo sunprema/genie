@@ -1,4 +1,5 @@
 defmodule Genie.Lamp.LampRenderer do
+  @moduledoc false
   use Phoenix.Component
 
   alias Genie.Lamp.{FieldDef, LampDefinition}
@@ -240,7 +241,7 @@ defmodule Genie.Lamp.LampRenderer do
   end
 
   defp field_toggle(assigns) do
-    assigns = assign(assigns, :checked, is_checked(assigns.field))
+    assigns = assign(assigns, :checked, checked?(assigns.field))
 
     ~H"""
     <div
@@ -409,7 +410,8 @@ defmodule Genie.Lamp.LampRenderer do
       type={action_button_type(@action.behavior)}
       class={"h-[34px] px-4 flex items-center gap-1.5 rounded-lg font-sans text-[13px] font-medium cursor-pointer border transition #{action_style_class(@action.style)}"}
       aria-label={@action.aria_label}
-      phx-value-lamp-id={@lamp_id}>
+      phx-value-lamp-id={@lamp_id}
+      phx-value-destructive={to_string(@action.destructive == true)}>
       <%= @action.label %>
     </button>
     """
@@ -594,7 +596,7 @@ defmodule Genie.Lamp.LampRenderer do
   defp effective_value(%FieldDef{value: value}) when not is_nil(value), do: value
   defp effective_value(%FieldDef{default: default}), do: default
 
-  defp is_checked(field) do
+  defp checked?(field) do
     effective_value(field) in ["true", true]
   end
 

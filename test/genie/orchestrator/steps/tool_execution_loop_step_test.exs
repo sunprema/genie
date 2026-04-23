@@ -1,8 +1,8 @@
 defmodule Genie.Orchestrator.Steps.ToolExecutionLoopStepTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Orchestrator.Steps.ToolExecutionLoopStep
   alias Genie.MockReqLLM
+  alias Genie.Orchestrator.Steps.ToolExecutionLoopStep
   alias ReqLLM.Context
 
   setup do

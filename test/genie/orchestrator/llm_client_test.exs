@@ -1,8 +1,8 @@
 defmodule Genie.Orchestrator.LlmClientTest do
   use ExUnit.Case, async: false
 
-  alias Genie.Orchestrator.LlmClient
   alias Genie.MockReqLLM
+  alias Genie.Orchestrator.LlmClient
   alias ReqLLM.Context
 
   setup do

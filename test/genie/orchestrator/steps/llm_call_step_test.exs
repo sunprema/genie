@@ -1,8 +1,8 @@
 defmodule Genie.Orchestrator.Steps.LlmCallStepTest do
   use ExUnit.Case, async: false
 
-  alias Genie.Orchestrator.Steps.LlmCallStep
   alias Genie.MockReqLLM
+  alias Genie.Orchestrator.Steps.LlmCallStep
   alias ReqLLM.Context
 
   setup do

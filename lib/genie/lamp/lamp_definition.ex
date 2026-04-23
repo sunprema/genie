@@ -1,4 +1,5 @@
 defmodule Genie.Lamp.LampDefinition do
+  @moduledoc false
   @type t :: %__MODULE__{}
 
   defstruct [
@@ -20,6 +21,7 @@ defmodule Genie.Lamp.LampDefinition do
 end
 
 defmodule Genie.Lamp.MetaDef do
+  @moduledoc false
   defstruct [
     :title,
     :description,
@@ -36,10 +38,14 @@ defmodule Genie.Lamp.MetaDef do
 end
 
 defmodule Genie.Lamp.ColumnDef do
+  @moduledoc false
   defstruct [:key, :label]
 end
 
 defmodule Genie.Lamp.FieldDef do
+  @moduledoc false
+  @type t :: %__MODULE__{}
+
   defstruct [
     :id,
     :type,
@@ -80,14 +86,17 @@ defmodule Genie.Lamp.FieldDef do
 end
 
 defmodule Genie.Lamp.OptionDef do
+  @moduledoc false
   defstruct [:value, :label, :description]
 end
 
 defmodule Genie.Lamp.ActionDef do
+  @moduledoc false
   defstruct [:id, :label, :aria_label, :style, :endpoint_id, :destructive, :behavior]
 end
 
 defmodule Genie.Lamp.EndpointDef do
+  @moduledoc false
   defstruct [
     :id,
     :method,
@@ -102,9 +111,11 @@ defmodule Genie.Lamp.EndpointDef do
 end
 
 defmodule Genie.Lamp.GroupDef do
+  @moduledoc false
   defstruct [:id, :label, :aria_label, :collapsible]
 end
 
 defmodule Genie.Lamp.StatusTemplate do
+  @moduledoc false
   defstruct [:state, :fields]
 end

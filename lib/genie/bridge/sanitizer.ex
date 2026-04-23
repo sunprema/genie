@@ -36,48 +36,48 @@ defmodule Genie.Bridge.Sanitizer do
     Regex.replace(
       ~r/<(\/?)([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/,
       html,
-      fn _full, slash, tag, attrs_str ->
-        tag_lower = String.downcase(tag)
-
-        if MapSet.member?(@allowed_elements, tag_lower) do
-          if slash == "/" do
-            "</#{tag_lower}>"
-          else
-            clean_attrs = filter_attributes(attrs_str)
-            "<#{tag_lower}#{clean_attrs}>"
-          end
-        else
-          ""
-        end
-      end
+      &replace_tag/4
     )
+  end
+
+  defp replace_tag(_full, slash, tag, attrs_str) do
+    tag_lower = String.downcase(tag)
+
+    if MapSet.member?(@allowed_elements, tag_lower) do
+      build_allowed_tag(tag_lower, slash, attrs_str)
+    else
+      ""
+    end
+  end
+
+  defp build_allowed_tag(tag_lower, "/", _attrs_str), do: "</#{tag_lower}>"
+
+  defp build_allowed_tag(tag_lower, _slash, attrs_str) do
+    "<#{tag_lower}#{filter_attributes(attrs_str)}>"
   end
 
   defp filter_attributes(attrs_str) do
     @attr_re
     |> Regex.scan(attrs_str)
-    |> Enum.flat_map(fn groups ->
-      name = Enum.at(groups, 1, "")
-      raw_value = Enum.at(groups, 2)
-      name_lower = String.downcase(name)
-      value = raw_value && unquote_attr(raw_value)
-
-      cond do
-        String.starts_with?(name_lower, "on") ->
-          []
-
-        allowed_attr?(name_lower) ->
-          if dangerous_href?(name_lower, value) do
-            []
-          else
-            format_attr(name_lower, value)
-          end
-
-        true ->
-          []
-      end
-    end)
+    |> Enum.flat_map(&safe_attribute/1)
     |> Enum.join("")
+  end
+
+  defp safe_attribute(groups) do
+    name = Enum.at(groups, 1, "")
+    raw_value = Enum.at(groups, 2)
+    name_lower = String.downcase(name)
+    value = raw_value && unquote_attr(raw_value)
+
+    cond do
+      String.starts_with?(name_lower, "on") -> []
+      allowed_attr?(name_lower) -> safe_href_attr(name_lower, value)
+      true -> []
+    end
+  end
+
+  defp safe_href_attr(name, value) do
+    if dangerous_href?(name, value), do: [], else: format_attr(name, value)
   end
 
   defp unquote_attr("\"" <> rest), do: String.trim_trailing(rest, "\"")

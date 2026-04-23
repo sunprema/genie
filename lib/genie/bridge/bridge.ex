@@ -4,6 +4,8 @@ defmodule Genie.Bridge do
   The browser never calls a lamp backend directly.
   """
 
+  require OpenTelemetry.Tracer, as: Tracer
+
   alias Genie.Bridge.VaultClient
   alias Genie.Lamp.{FieldDef, LampDefinition, LampRenderer}
 
@@ -65,27 +67,38 @@ defmodule Genie.Bridge do
 
     log_request(lamp.id, endpoint.id, url, params)
 
-    result =
-      case String.upcase(endpoint.method || "POST") do
-        "GET" ->
-          Req.get(url, [headers: headers, receive_timeout: timeout] ++ req_opts)
+    Tracer.with_span "Genie.bridge.request", %{
+      attributes: [{"lamp_id", lamp.id}, {"endpoint_id", endpoint.id}]
+    } do
+      start_ms = System.monotonic_time(:millisecond)
 
-        _ ->
-          Req.post(url, [json: params, headers: headers, receive_timeout: timeout] ++ req_opts)
+      result =
+        case String.upcase(endpoint.method || "POST") do
+          "GET" ->
+            Req.get(url, [headers: headers, receive_timeout: timeout] ++ req_opts)
+
+          _ ->
+            Req.post(url, [json: params, headers: headers, receive_timeout: timeout] ++ req_opts)
+        end
+
+      duration_ms = System.monotonic_time(:millisecond) - start_ms
+
+      case result do
+        {:ok, %{status: status, body: body}} when status in 200..299 ->
+          Tracer.set_attributes([{"status_code", status}, {"duration_ms", duration_ms}])
+          log_response(lamp.id, endpoint.id, status, body)
+          {:ok, body}
+
+        {:ok, %{status: status, body: body}} ->
+          Tracer.set_attributes([{"status_code", status}, {"duration_ms", duration_ms}])
+          log_response(lamp.id, endpoint.id, status, body)
+          {:error, {:http_error, status}}
+
+        {:error, reason} ->
+          Tracer.set_attributes([{"status_code", 0}, {"duration_ms", duration_ms}])
+          log_response(lamp.id, endpoint.id, :error, reason)
+          {:error, reason}
       end
-
-    case result do
-      {:ok, %{status: status, body: body}} when status in 200..299 ->
-        log_response(lamp.id, endpoint.id, status, body)
-        {:ok, body}
-
-      {:ok, %{status: status, body: body}} ->
-        log_response(lamp.id, endpoint.id, status, body)
-        {:error, {:http_error, status}}
-
-      {:error, reason} ->
-        log_response(lamp.id, endpoint.id, :error, reason)
-        {:error, reason}
     end
   end
 
@@ -121,7 +134,7 @@ defmodule Genie.Bridge do
   end
 
   defp build_headers(token, auth_scheme, session_id) do
-    trace_id = generate_trace_id()
+    trace_id = current_otel_trace_id()
 
     auth_header =
       case auth_scheme do
@@ -142,8 +155,23 @@ defmodule Genie.Bridge do
     end
   end
 
-  defp generate_trace_id do
-    :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+  defp current_otel_trace_id do
+    case :otel_tracer.current_span_ctx() do
+      :undefined ->
+        :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+
+      span_ctx ->
+        trace_id = :otel_span.trace_id(span_ctx)
+
+        if trace_id == 0 do
+          :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+        else
+          trace_id
+          |> Integer.to_string(16)
+          |> String.downcase()
+          |> String.pad_leading(32, "0")
+        end
+    end
   end
 
   defp render_status_html(lamp, response) when is_map(response) do
@@ -176,7 +204,7 @@ defmodule Genie.Bridge do
   defp sanitize_error({:http_error, status}), do: {:http_error, status}
 
   defp sanitize_error(_reason) do
-    trace_id = generate_trace_id()
+    trace_id = current_otel_trace_id()
     {:service_unavailable, trace_id}
   end
 end

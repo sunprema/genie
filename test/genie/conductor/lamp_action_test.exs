@@ -1,9 +1,9 @@
 defmodule Genie.ConductorTest do
   use Genie.DataCase, async: true
 
+  alias Genie.Accounts.{Organisation, User}
   alias Genie.Conductor
   alias Genie.Conductor.LampAction
-  alias Genie.Accounts.{Organisation, User}
   alias Genie.Lamp.LampRegistry
 
   @valid_xml File.read!(Path.join([

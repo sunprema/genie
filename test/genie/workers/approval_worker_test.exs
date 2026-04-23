@@ -3,11 +3,11 @@ defmodule Genie.Workers.ApprovalWorkerTest do
 
   require Ash.Query
 
-  alias Genie.Workers.ApprovalWorker
   alias Genie.Accounts.{Organisation, User}
   alias Genie.Audit.AuditLog
   alias Genie.Conductor
   alias Genie.Lamp.LampRegistry
+  alias Genie.Workers.ApprovalWorker
 
   @valid_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_s3_create_bucket.xml"]))
 

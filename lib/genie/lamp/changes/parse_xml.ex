@@ -1,4 +1,5 @@
 defmodule Genie.Lamp.Changes.ParseXml do
+  @moduledoc false
   use Ash.Resource.Change
 
   alias Genie.Lamp.LampParser

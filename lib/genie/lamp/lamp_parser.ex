@@ -1,4 +1,5 @@
 defmodule Genie.Lamp.LampParser do
+  @moduledoc false
   @behaviour Saxy.Handler
 
   alias Genie.Lamp.{
@@ -384,9 +385,8 @@ defmodule Genie.Lamp.LampParser do
          :ok <- validate_options_from_refs(defn),
          :ok <- validate_depends_on_refs(defn),
          :ok <- validate_aria_labels(defn),
-         :ok <- validate_genie_fill_values(defn),
-         :ok <- validate_primary_action(defn) do
-      :ok
+         :ok <- validate_genie_fill_values(defn) do
+      validate_primary_action(defn)
     end
   end
 
@@ -401,7 +401,7 @@ defmodule Genie.Lamp.LampParser do
     end
   end
 
-  defp validate_fields_present(%{fields: fields}) when length(fields) > 0, do: :ok
+  defp validate_fields_present(%{fields: [_ | _]}), do: :ok
   defp validate_fields_present(_), do: {:error, "lamp must define at least one field"}
 
   defp validate_action_endpoint_refs(%{actions: actions, endpoints: endpoints}) do
@@ -447,9 +447,8 @@ defmodule Genie.Lamp.LampParser do
 
   defp validate_aria_labels(%{fields: fields, actions: actions, status_templates: templates}) do
     with :ok <- check_aria_on(fields, "field"),
-         :ok <- check_aria_on(actions, "action"),
-         :ok <- check_template_aria(templates) do
-      :ok
+         :ok <- check_aria_on(actions, "action") do
+      check_template_aria(templates)
     end
   end
 
@@ -465,19 +464,19 @@ defmodule Genie.Lamp.LampParser do
 
   defp check_template_aria(templates) do
     Enum.reduce_while(templates, :ok, fn tmpl, :ok ->
-      result =
-        Enum.reduce_while(tmpl.fields, :ok, fn field, :ok ->
-          if field.aria_label do
-            {:cont, :ok}
-          else
-            {:halt,
-             {:error, "status template field in state #{tmpl.state} is missing aria-label"}}
-          end
-        end)
-
-      case result do
+      case check_template_fields_aria(tmpl) do
         :ok -> {:cont, :ok}
         error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp check_template_fields_aria(tmpl) do
+    Enum.reduce_while(tmpl.fields, :ok, fn field, :ok ->
+      if field.aria_label do
+        {:cont, :ok}
+      else
+        {:halt, {:error, "status template field in state #{tmpl.state} is missing aria-label"}}
       end
     end)
   end

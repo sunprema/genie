@@ -1,9 +1,9 @@
 defmodule Genie.Workers.LampActionWorkerTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Workers.LampActionWorker
   alias Genie.Accounts.{Organisation, User}
   alias Genie.Lamp.LampRegistry
+  alias Genie.Workers.LampActionWorker
 
   @valid_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_s3_create_bucket.xml"]))
   @ec2_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_ec2_list_instances.xml"]))

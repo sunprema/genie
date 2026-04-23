@@ -5,7 +5,7 @@ defmodule GenieWeb.CockpitLiveTest do
   import Phoenix.LiveViewTest
 
   alias Genie.Accounts.{Organisation, User}
-  alias Genie.Workers.{OrchestratorWorker, LampActionWorker}
+  alias Genie.Workers.{LampActionWorker, OrchestratorWorker}
 
   setup do
     n = System.unique_integer([:positive])

@@ -1,4 +1,5 @@
 defmodule Genie.Conversation.Checks.TurnSameOrg do
+  @moduledoc false
   use Ash.Policy.FilterCheck
 
   @impl true

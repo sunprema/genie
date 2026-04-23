@@ -5,6 +5,8 @@ defmodule Genie.Orchestrator.Steps.ToolExecutionLoopStep do
   """
   use Reactor.Step
 
+  require OpenTelemetry.Tracer, as: Tracer
+
   alias Genie.Bridge
   alias Genie.Lamp.LampRegistry
   alias Genie.Orchestrator.LlmClient
@@ -31,7 +33,7 @@ defmodule Genie.Orchestrator.Steps.ToolExecutionLoopStep do
   defp run_loop(%{calls: calls, llm_context: llm_context}, build_context, iterations) do
     tool_registry = build_context.tool_registry
 
-    case execute_tool_calls(calls, tool_registry, llm_context) do
+    case execute_tool_calls(calls, tool_registry, llm_context, iterations) do
       {:ok, updated_context} ->
         updated_build_context = %{build_context | llm_context: updated_context}
 
@@ -51,11 +53,17 @@ defmodule Genie.Orchestrator.Steps.ToolExecutionLoopStep do
     end
   end
 
-  defp execute_tool_calls(calls, tool_registry, llm_context) do
+  defp execute_tool_calls(calls, tool_registry, llm_context, iteration) do
     Enum.reduce_while(calls, {:ok, llm_context}, fn call, {:ok, ctx} ->
-      case execute_single_tool(call, tool_registry, ctx) do
-        {:ok, updated_ctx} -> {:cont, {:ok, updated_ctx}}
-        {:error, _} = error -> {:halt, error}
+      tool_name = Map.get(call, :name) || Map.get(call, "name") || "unknown"
+
+      Tracer.with_span "Genie.tool.execute", %{
+        attributes: [{"tool_name", to_string(tool_name)}, {"iteration", iteration}]
+      } do
+        case execute_single_tool(call, tool_registry, ctx) do
+          {:ok, updated_ctx} -> {:cont, {:ok, updated_ctx}}
+          {:error, _} = error -> {:halt, error}
+        end
       end
     end)
   end

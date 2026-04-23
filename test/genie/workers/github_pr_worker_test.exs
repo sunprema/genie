@@ -1,9 +1,9 @@
 defmodule Genie.Workers.GithubPrWorkerTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Workers.LampActionWorker
   alias Genie.Accounts.{Organisation, User}
   alias Genie.Lamp.LampRegistry
+  alias Genie.Workers.LampActionWorker
 
   @github_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "github_pull_requests.xml"]))
 

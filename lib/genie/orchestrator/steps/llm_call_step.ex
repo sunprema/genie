@@ -5,11 +5,28 @@ defmodule Genie.Orchestrator.Steps.LlmCallStep do
   """
   use Reactor.Step
 
+  require OpenTelemetry.Tracer, as: Tracer
+
   alias Genie.Orchestrator.LlmClient
 
   @impl Reactor.Step
   def run(%{build_context: build_context}, _context, _options) do
-    LlmClient.call(build_context)
+    Tracer.with_span "Genie.llm.call" do
+      case LlmClient.call(build_context) do
+        {:ok, {_type, data} = result} ->
+          usage = Map.get(data, :usage, %{})
+
+          Tracer.set_attributes([
+            {"token_count_input", usage[:input_tokens] || 0},
+            {"token_count_output", usage[:output_tokens] || 0}
+          ])
+
+          {:ok, result}
+
+        {:error, _} = error ->
+          error
+      end
+    end
   end
 
   @impl Reactor.Step

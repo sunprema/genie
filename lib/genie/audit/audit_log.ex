@@ -1,4 +1,5 @@
 defmodule Genie.Audit.AuditLog do
+  @moduledoc false
   use Ash.Resource,
     otp_app: :genie,
     domain: Genie.Audit,

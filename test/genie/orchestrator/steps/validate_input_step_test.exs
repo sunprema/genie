@@ -1,10 +1,10 @@
 defmodule Genie.Orchestrator.Steps.ValidateInputStepTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Orchestrator.Steps.ValidateInputStep
   alias Genie.Accounts.{Organisation, User}
   alias Genie.Conversation.Session
   alias Genie.Lamp.LampRegistry
+  alias Genie.Orchestrator.Steps.ValidateInputStep
 
   @valid_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_s3_create_bucket.xml"]))
 
@@ -62,7 +62,7 @@ defmodule Genie.Orchestrator.Steps.ValidateInputStepTest do
 
       assert returned_session.id == session.id
       assert returned_actor.id == actor.id
-      assert length(manifests) >= 1
+      assert manifests != []
     end
 
     test "returns error for non-existent session" do

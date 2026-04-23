@@ -1,9 +1,9 @@
 defmodule Genie.Orchestrator.Steps.FillUiStepTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Orchestrator.Steps.FillUiStep
-  alias Genie.Lamp.{FieldDef, LampRegistry, LampDefinition}
+  alias Genie.Lamp.{FieldDef, LampDefinition, LampRegistry}
   alias Genie.MockReqLLM
+  alias Genie.Orchestrator.Steps.FillUiStep
   alias ReqLLM.Context
 
   @valid_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_s3_create_bucket.xml"]))

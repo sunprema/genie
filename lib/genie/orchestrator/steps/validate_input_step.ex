@@ -5,8 +5,8 @@ defmodule Genie.Orchestrator.Steps.ValidateInputStep do
   """
   use Reactor.Step
 
-  alias GenieWeb.CockpitLive
   alias Genie.Lamp.LampRegistry
+  alias GenieWeb.CockpitLive
 
   @impl Reactor.Step
   def run(%{session_id: session_id, actor: actor}, _context, _options) do

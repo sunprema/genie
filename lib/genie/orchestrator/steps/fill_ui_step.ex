@@ -9,6 +9,8 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
   """
   use Reactor.Step
 
+  require OpenTelemetry.Tracer, as: Tracer
+
   alias Genie.Lamp.{LampDefinition, LampRegistry, LampRenderer}
   alias Genie.Orchestrator.LlmClient
 
@@ -16,8 +18,20 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
   def run(%{validated_action: {:action, action}, manifests: manifests, build_context: build_context}, _context, _options) do
     with {:ok, lamp} <- find_lamp(action.lamp_id, manifests),
          {:ok, filled} <- fill_definition(lamp, action.params || %{}, build_context) do
-      html = lamp_to_html(filled)
-      {:ok, %{html: html, lamp_id: action.lamp_id, type: :canvas}}
+      {context_count, infer_count} = count_fill_fields(lamp.fields)
+      field_count = length(lamp.fields)
+
+      Tracer.with_span "Genie.renderer.render", %{
+        attributes: [
+          {"lamp_id", action.lamp_id},
+          {"field_count", field_count},
+          {"infer_count", infer_count},
+          {"context_count", context_count}
+        ]
+      } do
+        html = lamp_to_html(filled)
+        {:ok, %{html: html, lamp_id: action.lamp_id, type: :canvas}}
+      end
     end
   end
 
@@ -27,12 +41,14 @@ def run(%{validated_action: {:message, %{text: text}}}, _context, _options) do
 
   @impl Reactor.Step
   def compensate(_reason, %{validated_action: {:action, action}, manifests: manifests} = _args, _context, _options) do
-    with {:ok, lamp} <- find_lamp(action.lamp_id, manifests) do
-      filled = fill_none_strategy(lamp)
-      html = lamp_to_html(filled)
-      {:continue, %{html: html, lamp_id: action.lamp_id, type: :canvas}}
-    else
-      _ -> :ok
+    case find_lamp(action.lamp_id, manifests) do
+      {:ok, lamp} ->
+        filled = fill_none_strategy(lamp)
+        html = lamp_to_html(filled)
+        {:continue, %{html: html, lamp_id: action.lamp_id, type: :canvas}}
+
+      _ ->
+        :ok
     end
   end
 
@@ -108,6 +124,12 @@ def run(%{validated_action: {:message, %{text: text}}}, _context, _options) do
   defp sort_fields(filled_fields, original_order) do
     index = original_order |> Enum.with_index() |> Map.new(fn {f, i} -> {f.id, i} end)
     Enum.sort_by(filled_fields, fn f -> Map.get(index, f.id, 999) end)
+  end
+
+  defp count_fill_fields(fields) do
+    context_count = Enum.count(fields, &(&1.genie_fill == :from_context))
+    infer_count = Enum.count(fields, &(&1.genie_fill == :infer))
+    {context_count, infer_count}
   end
 
   defp fill_none_strategy(%LampDefinition{fields: fields} = lamp) do

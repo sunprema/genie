@@ -1,4 +1,5 @@
 defmodule Genie.Conductor.LampAction do
+  @moduledoc false
   use Ash.Resource,
     otp_app: :genie,
     domain: Genie.Conductor,

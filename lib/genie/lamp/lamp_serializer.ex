@@ -1,4 +1,5 @@
 defmodule Genie.Lamp.LampSerializer do
+  @moduledoc false
   alias Genie.Lamp.{
     ActionDef,
     ColumnDef,

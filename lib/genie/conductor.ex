@@ -1,4 +1,5 @@
 defmodule Genie.Conductor do
+  @moduledoc false
   use Ash.Domain, otp_app: :genie
 
   alias Genie.Conductor.LampAction

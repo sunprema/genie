@@ -1,4 +1,5 @@
 defmodule Genie.Lamp.Loader do
+  @moduledoc false
   require Logger
 
   @lamps_dir "lamps"

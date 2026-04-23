@@ -1,9 +1,9 @@
 defmodule Genie.Orchestrator.Steps.PushCockpitStepTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Orchestrator.Steps.PushCockpitStep
   alias Genie.Accounts.{Organisation, User}
   alias Genie.Audit.AuditLog
+  alias Genie.Orchestrator.Steps.PushCockpitStep
 
   defp create_org!, do: Organisation |> Ash.Changeset.for_create(:create, %{name: "Org#{System.unique_integer([:positive])}", slug: "org-#{System.unique_integer([:positive])}"}) |> Ash.create!(authorize?: false)
 

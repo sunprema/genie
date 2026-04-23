@@ -1,4 +1,5 @@
 defmodule Genie.Accounts do
+  @moduledoc false
   use Ash.Domain, otp_app: :genie, extensions: [AshAdmin.Domain]
 
   admin do

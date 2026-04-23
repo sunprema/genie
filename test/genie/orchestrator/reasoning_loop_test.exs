@@ -1,11 +1,11 @@
 defmodule Genie.Orchestrator.ReasoningLoopTest do
   use Genie.DataCase, async: false
 
-  alias Genie.Orchestrator.ReasoningLoop
   alias Genie.Accounts.{Organisation, User}
   alias Genie.Conversation.Session
   alias Genie.Lamp.LampRegistry
   alias Genie.MockReqLLM
+  alias Genie.Orchestrator.ReasoningLoop
 
   @valid_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_s3_create_bucket.xml"]))
 

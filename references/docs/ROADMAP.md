@@ -389,18 +389,18 @@
 
 > Full OpenTelemetry instrumentation and audit trail completeness verification.
 
-- [ ] Add OTel span `"Genie.message.received"` in `CockpitLive.handle_event "send_message"`
-- [ ] Add OTel span `"Genie.reactor.start"` at Reactor entry with `session_id` and `actor_id` attributes
-- [ ] Add OTel span `"Genie.llm.call"` in `LlmCallStep` with `token_count_input`, `token_count_output` attributes
-- [ ] Add OTel span `"Genie.tool.execute"` in `ToolExecutionLoopStep` with `tool_name`, `iteration` attributes
-- [ ] Add OTel span `"Genie.bridge.request"` in `AppBridge.execute/1` with `lamp_id`, `endpoint_id`, `status_code`, `duration_ms` attributes
-- [ ] Add OTel span `"Genie.renderer.render"` in `FillUiStep` with `lamp_id`, `field_count`, `infer_count`, `context_count` attributes
-- [ ] Add OTel span `"Genie.canvas.push"` in `PushCockpitStep` with `session_id`, `lamp_id` attributes
-- [ ] Propagate `X-Genie-Trace-Id` header on all Bridge outbound requests using current span's trace ID
-- [ ] Verify `AuditLog` entry is written for every completed lamp action across all five lamps
-- [ ] Verify `AuditLog` entry is written for every denied lamp action
-- [ ] Write test: a single user message produces a single trace ID that appears in the `AuditLog` entry, the `LampAction` record, and the OTel span attributes
-- [ ] Configure OTel exporter for development — print spans to stdout in dev environment
+- [x] Add OTel span `"Genie.message.received"` in `CockpitLive.handle_event "send_message"`
+- [x] Add OTel span `"Genie.reactor.start"` at Reactor entry with `session_id` and `actor_id` attributes
+- [x] Add OTel span `"Genie.llm.call"` in `LlmCallStep` with `token_count_input`, `token_count_output` attributes
+- [x] Add OTel span `"Genie.tool.execute"` in `ToolExecutionLoopStep` with `tool_name`, `iteration` attributes
+- [x] Add OTel span `"Genie.bridge.request"` in `AppBridge.execute/1` with `lamp_id`, `endpoint_id`, `status_code`, `duration_ms` attributes
+- [x] Add OTel span `"Genie.renderer.render"` in `FillUiStep` with `lamp_id`, `field_count`, `infer_count`, `context_count` attributes
+- [x] Add OTel span `"Genie.canvas.push"` in `PushCockpitStep` with `session_id`, `lamp_id` attributes
+- [x] Propagate `X-Genie-Trace-Id` header on all Bridge outbound requests using current span's trace ID
+- [x] Verify `AuditLog` entry is written for every completed lamp action across all five lamps
+- [x] Verify `AuditLog` entry is written for every denied lamp action
+- [x] Write test: a single user message produces a single trace ID that appears in the `AuditLog` entry, the `LampAction` record, and the OTel span attributes
+- [x] Configure OTel exporter for development — print spans to stdout in dev environment
 
 ---
 
@@ -408,18 +408,18 @@
 
 > Systematic verification of all security requirements from `REQUIREMENTS.md §8`.
 
-- [ ] Write security test: browser cannot directly call a lamp backend URL — all paths route through Bridge
-- [ ] Write security test: Bridge rejects a call to an endpoint not declared in the lamp's XML manifest
-- [ ] Write security test: `Sanitizer` rejects HTML containing `<script>` in all positions (element, attribute, data URI)
-- [ ] Write security test: `Sanitizer` rejects HTML containing `javascript:` in `href` attributes
-- [ ] Write security test: `Sanitizer` rejects HTML containing `onerror`, `onclick`, and all `on*` attributes
-- [ ] Write security test: `FillUiStep` LLM fill prompt receives typed JSON schema only — no HTML, no XML, no raw ARIA attributes
-- [ ] Write security test: LLM fill with a poisoned `aria-label` value containing an instruction does not execute that instruction
-- [ ] Write security test: actor from Org A cannot trigger a lamp action on behalf of Org B
-- [ ] Write security test: `AuditLog` Ash resource rejects update and destroy actions at the policy layer
-- [ ] Write security test: a lamp with `destructive="true"` action triggers a confirmation dialog before `LampActionWorker` is inserted
-- [ ] Run `mix credo --strict` and resolve all warnings
-- [ ] Run `mix dialyzer` and resolve all type errors
+- [x] Write security test: browser cannot directly call a lamp backend URL — all paths route through Bridge
+- [x] Write security test: Bridge rejects a call to an endpoint not declared in the lamp's XML manifest
+- [x] Write security test: `Sanitizer` rejects HTML containing `<script>` in all positions (element, attribute, data URI)
+- [x] Write security test: `Sanitizer` rejects HTML containing `javascript:` in `href` attributes
+- [x] Write security test: `Sanitizer` rejects HTML containing `onerror`, `onclick`, and all `on*` attributes
+- [x] Write security test: `FillUiStep` LLM fill prompt receives typed JSON schema only — no HTML, no XML, no raw ARIA attributes
+- [x] Write security test: LLM fill with a poisoned `aria-label` value containing an instruction does not execute that instruction
+- [x] Write security test: actor from Org A cannot trigger a lamp action on behalf of Org B
+- [x] Write security test: `AuditLog` Ash resource rejects update and destroy actions at the policy layer
+- [x] Write security test: a lamp with `destructive="true"` action triggers a confirmation dialog before `LampActionWorker` is inserted
+- [x] Run `mix credo --strict` and resolve all warnings
+- [x] Run `mix dialyzer` and resolve all type errors
 
 ---
 
@@ -461,6 +461,6 @@
 | 13    | Lamp 4: GitHub PR Viewer         | `[ ]`  |
 | 14    | Lamp 5: Kubernetes Pod Restarter | `[ ]`  |
 | 15    | Demo Hardening                   | `[x]`  |
-| 16    | Observability and Audit          | `[ ]`  |
+| 16    | Observability and Audit          | `[x]`  |
 | 17    | Security Hardening               | `[ ]`  |
 | 18    | Definition of Done Verification  | `[ ]`  |

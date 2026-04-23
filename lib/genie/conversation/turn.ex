@@ -1,4 +1,5 @@
 defmodule Genie.Conversation.Turn do
+  @moduledoc false
   use Ash.Resource,
     otp_app: :genie,
     domain: Genie.Conversation,

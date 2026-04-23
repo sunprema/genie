@@ -1,8 +1,10 @@
 defmodule GenieWeb.CockpitLive do
   use GenieWeb, :live_view
 
+  require OpenTelemetry.Tracer, as: Tracer
+
   alias Genie.Conversation.Session
-  alias Genie.Workers.{OrchestratorWorker, LampActionWorker, ApprovalWorker}
+  alias Genie.Workers.{ApprovalWorker, LampActionWorker, OrchestratorWorker}
 
   on_mount {GenieWeb.LiveUserAuth, :live_user_required}
 
@@ -23,7 +25,8 @@ defmodule GenieWeb.CockpitLive do
        session_id: session_id,
        lamp_field_values: %{},
        lamp_group_states: %{},
-       pending_approval: nil
+       pending_approval: nil,
+       pending_destructive_action: nil
      )
      |> stream(:messages, [])}
   end
@@ -41,9 +44,13 @@ defmodule GenieWeb.CockpitLive do
       session_id = socket.assigns.session_id
       actor_id = socket.assigns[:current_user] && socket.assigns.current_user.id
 
-      %{session_id: session_id, user_message: message, actor_id: actor_id}
-      |> OrchestratorWorker.new()
-      |> Oban.insert()
+      Tracer.with_span "Genie.message.received", %{
+        attributes: [{"session_id", to_string(session_id)}, {"actor_id", to_string(actor_id)}]
+      } do
+        %{session_id: session_id, user_message: message, actor_id: actor_id}
+        |> OrchestratorWorker.new()
+        |> Oban.insert()
+      end
 
       {:noreply,
        socket
@@ -52,21 +59,31 @@ defmodule GenieWeb.CockpitLive do
     end
   end
 
+  def handle_event("lamp_submit", %{"destructive" => "true"} = params, socket) do
+    {:noreply,
+     socket
+     |> assign(pending_destructive_action: params)
+     |> push_event("lamp_confirm_needed", %{lamp_id: params["lamp_id"]})}
+  end
+
   def handle_event("lamp_submit", params, socket) do
-    session_id = socket.assigns.session_id
-    actor_id = socket.assigns[:current_user] && socket.assigns.current_user.id
-
-    %{
-      lamp_id: params["lamp_id"],
-      endpoint_id: params["endpoint_id"],
-      params: params["params"] || %{},
-      actor_id: actor_id,
-      session_id: session_id
-    }
-    |> LampActionWorker.new()
-    |> Oban.insert()
-
+    enqueue_lamp_action(params, socket)
     {:noreply, push_event(socket, "lamp_loading", %{})}
+  end
+
+  def handle_event("lamp_confirm_destructive", _params, socket) do
+    case socket.assigns[:pending_destructive_action] do
+      nil ->
+        {:noreply, socket}
+
+      params ->
+        enqueue_lamp_action(params, socket)
+
+        {:noreply,
+         socket
+         |> assign(pending_destructive_action: nil)
+         |> push_event("lamp_loading", %{})}
+    end
   end
 
   def handle_event("lamp_row_select", %{"lamp-id" => lamp_id, "row-id" => row_id, "endpoint-id" => endpoint_id}, socket) do
@@ -190,6 +207,21 @@ defmodule GenieWeb.CockpitLive do
   def push_error(session_id, reason) do
     Phoenix.PubSub.broadcast(Genie.PubSub, "canvas:#{session_id}", {:push_error, reason})
     Phoenix.PubSub.broadcast(Genie.PubSub, "chat:#{session_id}", {:push_error, reason})
+  end
+
+  defp enqueue_lamp_action(params, socket) do
+    session_id = socket.assigns.session_id
+    actor_id = socket.assigns[:current_user] && socket.assigns.current_user.id
+
+    %{
+      lamp_id: params["lamp_id"],
+      endpoint_id: params["endpoint_id"],
+      params: params["params"] || %{},
+      actor_id: actor_id,
+      session_id: session_id
+    }
+    |> LampActionWorker.new()
+    |> Oban.insert()
   end
 
   defp build_user_message(socket, text) do

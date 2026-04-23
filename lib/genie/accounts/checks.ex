@@ -1,4 +1,5 @@
 defmodule Genie.Accounts.Checks.ActorOrg do
+  @moduledoc false
   use Ash.Policy.FilterCheck
 
   @impl true
@@ -10,6 +11,7 @@ defmodule Genie.Accounts.Checks.ActorOrg do
 end
 
 defmodule Genie.Accounts.Checks.SameOrg do
+  @moduledoc false
   use Ash.Policy.FilterCheck
 
   @impl true
@@ -21,6 +23,7 @@ defmodule Genie.Accounts.Checks.SameOrg do
 end
 
 defmodule Genie.Accounts.Checks.IsSelf do
+  @moduledoc false
   use Ash.Policy.FilterCheck
 
   @impl true

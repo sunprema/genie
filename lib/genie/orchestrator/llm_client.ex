@@ -48,10 +48,11 @@ defmodule Genie.Orchestrator.LlmClient do
   defp parse_call_response(%ReqLLM.Response{finish_reason: :tool_calls} = response) do
     raw_calls = ReqLLM.Response.tool_calls(response)
     tool_calls = Enum.map(raw_calls, &ReqLLM.ToolCall.to_map/1)
+    usage = ReqLLM.Response.usage(response) || %{}
 
     case Enum.find(tool_calls, &(&1.name == @intent_tool_name)) do
       nil ->
-        {:ok, {:tool_call, %{calls: tool_calls, llm_context: response.context}}}
+        {:ok, {:tool_call, %{calls: tool_calls, llm_context: response.context, usage: usage}}}
 
       intent ->
         args = intent.arguments || %{}
@@ -62,13 +63,15 @@ defmodule Genie.Orchestrator.LlmClient do
             lamp_id: args["lamp_id"] || args[:lamp_id],
             endpoint_id: args["endpoint_id"] || args[:endpoint_id],
             params: args["params"] || args[:params] || %{},
-            llm_context: response.context
+            llm_context: response.context,
+            usage: usage
           }}}
     end
   end
 
   defp parse_call_response(response) do
-    {:ok, {:message, %{text: ReqLLM.Response.text(response) || "", llm_context: response.context}}}
+    usage = ReqLLM.Response.usage(response) || %{}
+    {:ok, {:message, %{text: ReqLLM.Response.text(response) || "", llm_context: response.context, usage: usage}}}
   end
 
   defp build_field_schema(fields) do
