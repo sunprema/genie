@@ -136,30 +136,30 @@
 
 > Converts a `%LampDefinition{}` into Phoenix.HTML.safe with full ARIA tree. No agent fill yet — renders with default values only.
 
-- [ ] Implement `Genie.Lamp.LampRenderer.render/1` as a Phoenix.Component
-- [ ] Implement `lamp_header/1` component — title, icon placeholder, GenieLamp badge
-- [ ] Implement `lamp_form/1` component — `role="form"`, `aria-label`, `aria-describedby`, `phx-submit`, `phx-value-lamp-id`
-- [ ] Implement `render_field/1` dispatcher — pattern matches on `field.type`
-- [ ] Implement `field_text/1` — `<input type="text">` with `aria-label`, `aria-required`, `aria-describedby`, `pattern`, `maxlength`, fill class
-- [ ] Implement `field_textarea/1` — `<textarea>` with `rows`, `aria-label`, fill class
-- [ ] Implement `field_select/1` — `<select>` with `<option selected={...}>` for each option, dynamic options placeholder when `options_from` present, fill class
-- [ ] Implement `field_radio/1` — `role="radiogroup"` wrapping `role="radio"` buttons with `aria-checked`
-- [ ] Implement `field_toggle/1` — `role="switch"`, `aria-checked`, `phx-click="lamp_toggle"`, `phx-value-field`, fill class
-- [ ] Implement `field_number/1` — `<input type="number">` with `min`, `max`, `step`, `aria-label`
-- [ ] Implement `field_date/1` — `<input type="date">` with computed `min`/`max` from offset days
-- [ ] Implement `field_checkbox_group/1` — `role="group"` wrapping `role="checkbox"` items with `aria-checked`
-- [ ] Implement `field_hidden/1` — `aria-hidden="true"`, `aria-label` preserved for agent
-- [ ] Implement `render_group/1` — `role="group"`, `aria-labelledby`, collapsible with `phx-click="lamp_group_toggle"`
-- [ ] Implement `fill_badge/1` — renders "context" badge for `:from_context`, "infer" badge for `:infer`, nothing for `:none`
-- [ ] Implement `lamp_actions/1` — `role="group"` `aria-label="Form actions"`, renders each `%ActionDef{}`
-- [ ] Implement `render_action/1` — `<button type="submit|button">` with `aria-label`, correct style class
-- [ ] Implement `depends_on` visibility logic — sets `aria-hidden="true"` and CSS `hidden` class when condition not met
-- [ ] Implement `fill_class/1` helper — maps genie_fill atom to CSS class string
-- [ ] Implement status template renderer — `render_status/2` takes `%LampDefinition{}` and JSON result map, finds matching template, interpolates `{variables}` from result map, renders template fields
-- [ ] Write snapshot test: parse `aws_s3_create_bucket.xml`, render with defaults, assert full HTML output matches saved snapshot
-- [ ] Write test: all required ARIA attributes present on every rendered field type
-- [ ] Write test: `depends-on` field is `aria-hidden="true"` when condition not met, visible when met
-- [ ] Write test: `render_status/2` correctly interpolates `{bucket_name}` in status template aria-label
+- [x] Implement `Genie.Lamp.LampRenderer.render/1` as a Phoenix.Component
+- [x] Implement `lamp_header/1` component — title, icon placeholder, GenieLamp badge
+- [x] Implement `lamp_form/1` component — `role="form"`, `aria-label`, `aria-describedby`, `phx-submit`, `phx-value-lamp-id`
+- [x] Implement `render_field/1` dispatcher — pattern matches on `field.type`
+- [x] Implement `field_text/1` — `<input type="text">` with `aria-label`, `aria-required`, `aria-describedby`, `pattern`, `maxlength`, fill class
+- [x] Implement `field_textarea/1` — `<textarea>` with `rows`, `aria-label`, fill class
+- [x] Implement `field_select/1` — `<select>` with `<option selected={...}>` for each option, dynamic options placeholder when `options_from` present, fill class
+- [x] Implement `field_radio/1` — `role="radiogroup"` wrapping `role="radio"` buttons with `aria-checked`
+- [x] Implement `field_toggle/1` — `role="switch"`, `aria-checked`, `phx-click="lamp_toggle"`, `phx-value-field`, fill class
+- [x] Implement `field_number/1` — `<input type="number">` with `min`, `max`, `step`, `aria-label`
+- [x] Implement `field_date/1` — `<input type="date">` with computed `min`/`max` from offset days
+- [x] Implement `field_checkbox_group/1` — `role="group"` wrapping `role="checkbox"` items with `aria-checked`
+- [x] Implement `field_hidden/1` — `aria-hidden="true"`, `aria-label` preserved for agent
+- [x] Implement `render_group/1` — `role="group"`, `aria-labelledby`, collapsible with `phx-click="lamp_group_toggle"`
+- [x] Implement `fill_badge/1` — renders "context" badge for `:from_context`, "infer" badge for `:infer`, nothing for `:none`
+- [x] Implement `lamp_actions/1` — `role="group"` `aria-label="Form actions"`, renders each `%ActionDef{}`
+- [x] Implement `render_action/1` — `<button type="submit|button">` with `aria-label`, correct style class
+- [x] Implement `depends_on` visibility logic — sets `aria-hidden="true"` and CSS `hidden` class when condition not met
+- [x] Implement `fill_class/1` helper — maps genie_fill atom to CSS class string
+- [x] Implement status template renderer — `render_status/2` takes `%LampDefinition{}` and JSON result map, finds matching template, interpolates `{variables}` from result map, renders template fields
+- [x] Write snapshot test: parse `aws_s3_create_bucket.xml`, render with defaults, assert full HTML output matches saved snapshot
+- [x] Write test: all required ARIA attributes present on every rendered field type
+- [x] Write test: `depends-on` field is `aria-hidden="true"` when condition not met, visible when met
+- [x] Write test: `render_status/2` correctly interpolates `{bucket_name}` in status template aria-label
 
 ---
 
@@ -449,7 +449,7 @@
 | 1     | Ash Domain Foundation            | `[x]`  |
 | 2     | GenieLamp XML Parser             | `[x]`  |
 | 3     | GenieLamp Registry               | `[x]`  |
-| 4     | GenieLamp Renderer               | `[ ]`  |
+| 4     | GenieLamp Renderer               | `[x]`  |
 | 5     | Application Bridge               | `[ ]`  |
 | 6     | Conductor — Action Validation    | `[ ]`  |
 | 7     | Oban Workers                     | `[ ]`  |
