@@ -82,7 +82,7 @@ defmodule Genie.Workers.LampActionWorker do
                actor: actor,
                session_id: session_id
              ) do
-        if lamp.meta && lamp.meta.requires_approval do
+        if lamp.meta && lamp.meta.requires_approval && !demo_actor?(actor) do
           handle_approval_required(lamp, lamp_action, session_id)
         else
           with {:ok, html} <- Conductor.execute(lamp_action) do
@@ -262,5 +262,12 @@ defmodule Genie.Workers.LampActionWorker do
       {:ok, user} -> user
       _ -> nil
     end
+  end
+
+  defp demo_actor?(nil), do: false
+
+  defp demo_actor?(actor) do
+    demo_email = Application.get_env(:genie, :demo_actor_email, "demo@genie.dev")
+    to_string(actor.email) == demo_email
   end
 end

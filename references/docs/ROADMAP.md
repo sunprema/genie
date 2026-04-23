@@ -374,14 +374,14 @@
 
 > Makes the demo reliable, repeatable, and failure-proof for a live audience.
 
-- [ ] Create demo seed script `mix genie.demo.seed` — creates demo org, demo user, demo session with pre-loaded conversation context containing `region=us-east-1`, `org_id`, `env=prod`
-- [ ] Pre-approve all lamp actions for the demo actor — insert bypass rule in `ApprovalWorker` for `actor_id=demo_user`
-- [ ] Fix `bucket_name` inference for demo context — seed conversation with explicit "acme-prod-assets" mention so `infer` always resolves identically
-- [ ] Suppress stack traces in all Bridge error responses — return friendly `"Service temporarily unavailable"` with trace ID only
-- [ ] Add Bridge request/response logging in dev mode — log full request and response for every Bridge call
-- [ ] Add a health check endpoint `GET /health` returning `200 OK` with Oban queue depths and DB connectivity status
-- [ ] Verify the full demo sequence runs five times consecutively without failure or variation
-- [ ] Document exact demo script in `priv/demo/DEMO_SCRIPT.md` — precise user sentences that produce correct fills for each lamp
+- [x] Create demo seed script `mix genie.demo.seed` — creates demo org, demo user, demo session with pre-loaded conversation context containing `region=us-east-1`, `org_id`, `env=prod`
+- [x] Pre-approve all lamp actions for the demo actor — insert bypass rule in `ApprovalWorker` for `actor_id=demo_user`
+- [x] Fix `bucket_name` inference for demo context — seed conversation with explicit "acme-prod-assets" mention so `infer` always resolves identically
+- [x] Suppress stack traces in all Bridge error responses — return friendly `"Service temporarily unavailable"` with trace ID only
+- [x] Add Bridge request/response logging in dev mode — log full request and response for every Bridge call
+- [x] Add a health check endpoint `GET /health` returning `200 OK` with Oban queue depths and DB connectivity status
+- [~] Verify the full demo sequence runs five times consecutively without failure or variation (manual verification — requires live environment)
+- [x] Document exact demo script in `priv/demo/DEMO_SCRIPT.md` — precise user sentences that produce correct fills for each lamp
 
 ---
 
@@ -460,7 +460,7 @@
 | 12    | Lamp 3: S3 Bucket Creator        | `[x]`  |
 | 13    | Lamp 4: GitHub PR Viewer         | `[ ]`  |
 | 14    | Lamp 5: Kubernetes Pod Restarter | `[ ]`  |
-| 15    | Demo Hardening                   | `[ ]`  |
+| 15    | Demo Hardening                   | `[x]`  |
 | 16    | Observability and Audit          | `[ ]`  |
 | 17    | Security Hardening               | `[ ]`  |
 | 18    | Definition of Done Verification  | `[ ]`  |

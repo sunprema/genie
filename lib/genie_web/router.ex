@@ -34,6 +34,7 @@ defmodule GenieWeb.Router do
     pipe_through :api
 
     post "/webhooks/:lamp_id", WebhookController, :create
+    get "/health", HealthController, :index
   end
 
   scope "/", GenieWeb do
