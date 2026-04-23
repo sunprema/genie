@@ -36,6 +36,13 @@ The platform solves **tool sprawl** in DevOps and platform engineering. Engineer
 
 ---
 
+## ELIXIR DEPS
+
+- Elixir libs are added as deps in mix.exs
+- The libaries are added to /deps/<library_name> folder.
+- You can check the documentation of library under /deps/<library_name>/README.md file.
+- If you have any question about using a library, you should check the README.md of the library first, then the code inside for deeper look.
+
 <!-- usage-rules-start -->
 <!-- usage_rules-start -->
 

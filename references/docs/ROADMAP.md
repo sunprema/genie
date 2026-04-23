@@ -222,34 +222,34 @@
 
 ### LiveView
 
-- [ ] Implement `GenieWeb.CockpitLive` with `mount/3` — subscribe to `"canvas:{session_id}"` and `"chat:{session_id}"` PubSub topics, load pinned lamps, assign initial state
-- [ ] Implement `render/1` — two-panel layout, `role="application"`, left chat panel, right canvas panel with `phx-update="ignore"`, `phx-hook="CanvasHook"`, `aria-live="polite"`
-- [ ] Implement `handle_event "send_message"` — insert `OrchestratorWorker` Oban job, append user message to chat assigns
-- [ ] Implement `handle_event "lamp_submit"` — insert `LampActionWorker` Oban job, push `"lamp_loading"` event to canvas
-- [ ] Implement `handle_event "lamp_toggle"` — update field value in session state, push updated field fragment
-- [ ] Implement `handle_event "lamp_field_change"` — evaluate `depends-on` conditions, push visibility updates
-- [ ] Implement `handle_event "lamp_group_toggle"` — toggle group collapsed state, push updated group fragment
-- [ ] Implement `handle_info {:push_canvas, html}` — `push_event "update_canvas"`
-- [ ] Implement `handle_info {:push_chat, message}` — append to chat assigns
-- [ ] Implement `handle_info {:push_error, reason}` — append error message to chat, push error state to canvas
-- [ ] Implement public `push_canvas/2`, `push_chat/2`, `push_error/2` — `Phoenix.PubSub.broadcast` to session topics
+- [x] Implement `GenieWeb.CockpitLive` with `mount/3` — subscribe to `"canvas:{session_id}"` and `"chat:{session_id}"` PubSub topics, load pinned lamps, assign initial state
+- [x] Implement `render/1` — two-panel layout, `role="application"`, left chat panel, right canvas panel with `phx-update="ignore"`, `phx-hook="CanvasHook"`, `aria-live="polite"`
+- [x] Implement `handle_event "send_message"` — insert `OrchestratorWorker` Oban job, append user message to chat assigns
+- [x] Implement `handle_event "lamp_submit"` — insert `LampActionWorker` Oban job, push `"lamp_loading"` event to canvas
+- [x] Implement `handle_event "lamp_toggle"` — update field value in session state, push updated field fragment
+- [x] Implement `handle_event "lamp_field_change"` — evaluate `depends-on` conditions, push visibility updates
+- [x] Implement `handle_event "lamp_group_toggle"` — toggle group collapsed state, push updated group fragment
+- [x] Implement `handle_info {:push_canvas, html}` — `push_event "update_canvas"`
+- [x] Implement `handle_info {:push_chat, message}` — append to chat assigns
+- [x] Implement `handle_info {:push_error, reason}` — append error message to chat, push error state to canvas
+- [x] Implement public `push_canvas/2`, `push_chat/2`, `push_error/2` — `Phoenix.PubSub.broadcast` to session topics
 
 ### Canvas JS Hook
 
-- [ ] Implement `CanvasHook` in `assets/js/hooks/canvas_hook.js` — `handleEvent "update_canvas"` sets `innerHTML`, `handleEvent "lamp_loading"` sets spinner HTML with correct `role="status"` and `aria-label`
-- [ ] Register `CanvasHook` in `app.js` LiveView hooks
+- [x] Implement `CanvasHook` in `assets/js/hooks/canvas_hook.js` — `handleEvent "update_canvas"` sets `innerHTML`, `handleEvent "lamp_loading"` sets spinner HTML with correct `role="status"` and `aria-label`
+- [x] Register `CanvasHook` in `app.js` LiveView hooks
 
 ### Router
 
-- [ ] Add authenticated route `GET /cockpit` → `CockpitLive`
-- [ ] Add webhook route `POST /webhooks/:lamp_id` → `WebhookController` (stub handler for now)
-- [ ] Add authentication plug — reject unauthenticated requests to `/cockpit`
+- [x] Add authenticated route `GET /cockpit` → `CockpitLive`
+- [x] Add webhook route `POST /webhooks/:lamp_id` → `WebhookController` (stub handler for now)
+- [x] Add authentication plug — reject unauthenticated requests to `/cockpit`
 
 ### Integration test
 
-- [ ] Write LiveView integration test: mount Cockpit, send `"send_message"` event, assert `OrchestratorWorker` job inserted
-- [ ] Write LiveView integration test: broadcast `{:push_canvas, html}` to session topic, assert `push_event "update_canvas"` fired with correct HTML
-- [ ] Write LiveView integration test: send `"lamp_submit"` event, assert `LampActionWorker` job inserted
+- [x] Write LiveView integration test: mount Cockpit, send `"send_message"` event, assert `OrchestratorWorker` job inserted
+- [x] Write LiveView integration test: broadcast `{:push_canvas, html}` to session topic, assert `push_event "update_canvas"` fired with correct HTML
+- [x] Write LiveView integration test: send `"lamp_submit"` event, assert `LampActionWorker` job inserted
 
 ---
 
@@ -453,7 +453,7 @@
 | 5     | Application Bridge               | `[x]`  |
 | 6     | Conductor — Action Validation    | `[x]`  |
 | 7     | Oban Workers                     | `[x]`  |
-| 8     | Phoenix LiveView Cockpit         | `[ ]`  |
+| 8     | Phoenix LiveView Cockpit         | `[x]`  |
 | 9     | Ash Reactor — Reasoning Loop     | `[ ]`  |
 | 10    | Lamp 1: EC2 Instance Viewer      | `[ ]`  |
 | 11    | Lamp 2: PagerDuty Incidents      | `[ ]`  |

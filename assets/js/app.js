@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/genie"
 import topbar from "../vendor/topbar"
+import CanvasHook from "./hooks/canvas_hook"
 
 const CockpitComposer = {
   mounted() {
@@ -43,7 +44,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, CockpitComposer},
+  hooks: {...colocatedHooks, CockpitComposer, CanvasHook},
 })
 
 // Show progress bar on live navigation and form submits

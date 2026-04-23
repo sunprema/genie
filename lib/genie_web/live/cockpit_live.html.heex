@@ -1,4 +1,4 @@
-<div class="cockpit-page">
+<div class="cockpit-page" role="application" aria-label="Genie Cockpit">
 
   <%!-- Top bar --%>
   <div class="ck-top">
@@ -83,7 +83,7 @@
     </aside>
 
     <%!-- Chat panel --%>
-    <section class="ck-chat">
+    <section class="ck-chat" aria-label="Chat">
       <div class="ck-chat-head">
         <div class="h">Workspace</div>
         <div class="s">
@@ -92,7 +92,7 @@
       </div>
 
       <%!-- Pinned tools --%>
-      <div class="ck-pins">
+      <div class="ck-pins" role="toolbar" aria-label="Pinned lamps">
         <button type="button" class="ck-pin s3"><span class="dot"></span>Create S3 Bucket</button>
         <button type="button" class="ck-pin ci"><span class="dot"></span>Pipeline Status</button>
         <button type="button" class="ck-pin pd"><span class="dot"></span>On-call Now</button>
@@ -101,12 +101,26 @@
       </div>
 
       <%!-- Message stream --%>
-      <div class="ck-stream" id="ck-stream">
+      <div class="ck-stream" id="ck-stream" phx-update="stream" aria-label="Conversation" aria-live="polite">
+        <div
+          :for={{dom_id, msg} <- @streams.messages}
+          id={dom_id}
+          class={["ck-msg", "ck-reveal", if(msg.error, do: "ck-msg-error", else: "")]}
+        >
+          <div class={["ck-msg-avatar", if(msg.role == :user, do: "you", else: "g")]}></div>
+          <div class="ck-msg-body">
+            <div class="ck-msg-name">
+              <b><%= msg.name %></b>
+              <span class="t"><%= msg.timestamp %></span>
+            </div>
+            <div class="ck-msg-text"><%= msg.text %></div>
+          </div>
+        </div>
       </div>
 
       <%!-- Composer --%>
       <div class="ck-composer">
-        <form phx-change="update_composer">
+        <form phx-change="update_composer" phx-submit="send_message">
           <div class="ck-composer-box">
             <textarea
               id="ck-composer-textarea"
@@ -114,6 +128,7 @@
               rows="1"
               placeholder="Ask Genie — describe what you need to do…"
               phx-hook="CockpitComposer"
+              aria-label="Message composer"
             ><%= @message %></textarea>
             <div class="ck-composer-actions">
               <div class="left">
@@ -138,9 +153,10 @@
                   <span class="pulse"></span>agent · orchestrator
                 </button>
                 <button
-                  type="button"
+                  type="submit"
                   class="ck-send"
                   disabled={@message == ""}
+                  aria-label="Send message"
                 >
                   Send
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
@@ -155,7 +171,7 @@
     </section>
 
     <%!-- Canvas --%>
-    <section class="ck-canvas">
+    <section class="ck-canvas" aria-label="Canvas">
       <div class="ck-canvas-head">
         <div class="tabs">
           <button type="button" class="ck-tab active">
@@ -173,7 +189,14 @@
           </button>
         </div>
       </div>
-      <div class="ck-canvas-body">
+      <div
+        id="ck-canvas-body"
+        class="ck-canvas-body"
+        phx-update="ignore"
+        phx-hook="CanvasHook"
+        aria-live="polite"
+        aria-label="Canvas content"
+      >
         <div class="ck-empty">
           <div class="em">Ask, and it's <em>done.</em></div>
           <div class="sub">Describe a task in plain English. Genie will find the right tool and bring it here.</div>
