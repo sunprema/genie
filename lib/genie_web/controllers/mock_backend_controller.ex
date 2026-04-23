@@ -66,6 +66,67 @@ defmodule GenieWeb.MockBackendController do
     })
   end
 
+  def github_pull_requests(conn, params) do
+    repo = Map.get(params, "repo", "acme/platform")
+    state_filter = Map.get(params, "state", "open")
+
+    pull_requests = [
+      %{
+        number: "42",
+        title: "Add rate limiting to API gateway",
+        author: "alice",
+        state: "open",
+        base: "main",
+        head: "feature/rate-limiting",
+        updated_at: "2 hours ago"
+      },
+      %{
+        number: "38",
+        title: "Fix memory leak in worker pool",
+        author: "bob",
+        state: "open",
+        base: "main",
+        head: "fix/worker-memory-leak",
+        updated_at: "1 day ago"
+      },
+      %{
+        number: "35",
+        title: "Upgrade Elixir to 1.17",
+        author: "carol",
+        state: "closed",
+        base: "main",
+        head: "chore/elixir-upgrade",
+        updated_at: "3 days ago"
+      }
+    ]
+
+    filtered =
+      if state_filter == "all" do
+        pull_requests
+      else
+        Enum.filter(pull_requests, &(&1.state == state_filter))
+      end
+
+    json(conn, %{state: "ready-list", repo: repo, pull_requests: filtered})
+  end
+
+  def github_pr_detail(conn, %{"id" => pr_number} = _params) do
+    json(conn, %{
+      state: "ready-detail",
+      pull_request: %{
+        number: pr_number,
+        title: "Add rate limiting to API gateway",
+        author: "alice",
+        state: "open",
+        base: "main",
+        head: "feature/rate-limiting",
+        body: "Implements token-bucket rate limiting at the API gateway layer to prevent abuse.",
+        url: "https://github.com/acme/platform/pull/#{pr_number}",
+        updated_at: "2 hours ago"
+      }
+    })
+  end
+
   def ec2_instances(conn, params) do
     region = Map.get(params, "region", "us-east-1")
     state_filter = Map.get(params, "state", "running")

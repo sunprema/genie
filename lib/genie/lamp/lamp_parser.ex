@@ -142,7 +142,10 @@ defmodule Genie.Lamp.LampParser do
       value_key: attr(attrs, "value-key"),
       style: attr(attrs, "style"),
       href: attr(attrs, "href"),
-      action_id: attr(attrs, "action-id")
+      action_id: attr(attrs, "action-id"),
+      row_click: parse_bool(attr(attrs, "row-click")),
+      row_id_key: attr(attrs, "row-id-key"),
+      row_click_endpoint: attr(attrs, "row-click-endpoint")
     }
 
     {:ok, %{state | stack: ["field" | state.stack], current_field: field}}
@@ -564,6 +567,7 @@ defmodule Genie.Lamp.LampParser do
   defp parse_field_type("link"), do: :link
   defp parse_field_type("action"), do: :action
   defp parse_field_type("table"), do: :table
+  defp parse_field_type("detail-panel"), do: :detail_panel
   defp parse_field_type(nil), do: nil
   defp parse_field_type(other), do: other
 

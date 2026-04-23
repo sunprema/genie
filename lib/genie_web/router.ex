@@ -109,6 +109,8 @@ defmodule GenieWeb.Router do
       get "/aws/s3/buckets/:bucket_name/status", MockBackendController, :s3_bucket_status
       get "/aws/ec2/instances", MockBackendController, :ec2_instances
       get "/pagerduty/incidents", MockBackendController, :pagerduty_incidents
+      get "/github/pulls", MockBackendController, :github_pull_requests
+      get "/github/pulls/:id", MockBackendController, :github_pr_detail
     end
   end
 

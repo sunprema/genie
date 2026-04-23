@@ -104,7 +104,10 @@ defmodule Genie.Lamp.LampSerializer do
       action_id: f.action_id,
       value: f.value,
       value_key: f.value_key,
-      columns: Enum.map(f.columns || [], &column_to_map/1)
+      columns: Enum.map(f.columns || [], &column_to_map/1),
+      row_click: f.row_click,
+      row_id_key: f.row_id_key,
+      row_click_endpoint: f.row_click_endpoint
     }
   end
 
@@ -201,7 +204,10 @@ defmodule Genie.Lamp.LampSerializer do
       action_id: get(m, "action_id"),
       value: get(m, "value"),
       value_key: get(m, "value_key"),
-      columns: Enum.map(get(m, "columns") || [], &column_from_map/1)
+      columns: Enum.map(get(m, "columns") || [], &column_from_map/1),
+      row_click: get(m, "row_click"),
+      row_id_key: get(m, "row_id_key"),
+      row_click_endpoint: get(m, "row_click_endpoint")
     }
   end
 

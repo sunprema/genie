@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lamp
+  id="github.pulls.list"
+  version="1.0"
+  category="source-control"
+  vendor="github">
+
+  <meta>
+    <title>GitHub Pull Request Viewer</title>
+    <description>Browse and inspect pull requests for a GitHub repository.</description>
+    <icon>github</icon>
+    <tags>github,pull-requests,code-review</tags>
+    <requires-approval>false</requires-approval>
+    <destructive>false</destructive>
+    <audit>true</audit>
+    <base-url>http://localhost:4000/genie</base-url>
+    <auth-scheme>bearer</auth-scheme>
+    <timeout-ms>15000</timeout-ms>
+  </meta>
+
+  <endpoints>
+    <endpoint
+      id="list_prs"
+      method="GET"
+      path="/github/pulls"
+      trigger="on-submit"
+      action-id="submit_list"/>
+    <endpoint
+      id="fetch_pr_detail"
+      method="GET"
+      path="/github/pulls/{id}"
+      trigger="on-submit"
+      action-id="submit_detail"/>
+  </endpoints>
+
+  <ui>
+    <form
+      aria-label="List Pull Requests"
+      aria-describedby="form-prs-description">
+
+      <description id="form-prs-description">
+        View open, closed, or all pull requests for a GitHub repository.
+      </description>
+
+      <field
+        id="repo"
+        type="text"
+        label="Repository"
+        aria-label="GitHub repository in owner/repo format, e.g. acme/platform"
+        aria-describedby="hint-repo"
+        genie-fill="from-context"
+        required="true"
+        placeholder="owner/repo"/>
+      <hint id="hint-repo">Enter the full repository path, e.g. acme/platform.</hint>
+
+      <field
+        id="state"
+        type="select"
+        label="PR State"
+        aria-label="Filter pull requests by state: open, closed, or all"
+        genie-fill="infer"
+        required="true"
+        default="open">
+        <option value="open" label="Open" description="Only open pull requests"/>
+        <option value="closed" label="Closed" description="Only closed pull requests"/>
+        <option value="all" label="All" description="All pull requests"/>
+      </field>
+
+    </form>
+  </ui>
+
+  <actions>
+    <action
+      id="submit_list"
+      label="List PRs"
+      aria-label="Submit form to list pull requests with the selected filters"
+      style="primary"
+      endpoint-id="list_prs"
+      destructive="false"
+      behavior="submit"/>
+    <action
+      id="submit_detail"
+      label="View PR"
+      aria-label="Fetch detail for the selected pull request"
+      style="secondary"
+      endpoint-id="fetch_pr_detail"
+      destructive="false"
+      behavior="submit"/>
+  </actions>
+
+  <status-templates>
+    <template state="submitting">
+      <field type="spinner"
+        label="Loading pull requests..."
+        aria-label="Fetching pull requests, please wait"
+        style="info"/>
+    </template>
+
+    <template state="ready-list">
+      <field type="table"
+        aria-label="Pull requests for {repo}"
+        value-key="pull_requests"
+        row-click="true"
+        row-id-key="number"
+        row-click-endpoint="fetch_pr_detail">
+        <column key="number" label="Number"/>
+        <column key="title" label="Title"/>
+        <column key="author" label="Author"/>
+        <column key="state" label="State"/>
+        <column key="updated_at" label="Updated"/>
+      </field>
+    </template>
+
+    <template state="ready-detail">
+      <field type="detail-panel"
+        aria-label="Pull Request #{number} — {title}"
+        value-key="pull_request">
+        <column key="number" label="Number"/>
+        <column key="title" label="Title"/>
+        <column key="author" label="Author"/>
+        <column key="state" label="State"/>
+        <column key="base" label="Base Branch"/>
+        <column key="head" label="Head Branch"/>
+        <column key="body" label="Description"/>
+        <column key="url" label="URL"/>
+        <column key="updated_at" label="Updated"/>
+      </field>
+    </template>
+
+    <template state="failed">
+      <field type="banner"
+        label="Failed to load pull requests"
+        aria-label="GitHub pull request fetch failed: {error_message}"
+        style="error"
+        value="{error_message}"/>
+    </template>
+  </status-templates>
+
+</lamp>

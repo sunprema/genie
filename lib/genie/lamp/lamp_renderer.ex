@@ -15,7 +15,7 @@ defmodule Genie.Lamp.LampRenderer do
     template = Enum.find(defn.status_templates || [], &(&1.state == state))
 
     if template do
-      rendered = status_template_container(%{template: template, vars: result_map, __changed__: %{}})
+      rendered = status_template_container(%{template: template, vars: result_map, lamp_id: defn.id, __changed__: nil})
       {:safe, Phoenix.HTML.Safe.to_iodata(rendered)}
     else
       {:safe, ""}
@@ -421,7 +421,7 @@ defmodule Genie.Lamp.LampRenderer do
     ~H"""
     <div class="flex flex-col gap-3 p-5" role="status">
       <%= for field <- (@template.fields || []) do %>
-        <.render_status_field field={field} vars={@vars} />
+        <.render_status_field field={field} vars={@vars} lamp_id={@lamp_id} />
       <% end %>
     </div>
     """
@@ -507,16 +507,63 @@ defmodule Genie.Lamp.LampRenderer do
         </thead>
         <tbody>
           <%= for row <- @rows do %>
-            <tr class="border-b border-slate-100 hover:bg-slate-50">
-              <%= for col <- (@field.columns || []) do %>
-                <td class="px-3 py-2 text-slate-700">
-                  <%= Map.get(row, col.key, "") %>
-                </td>
-              <% end %>
-            </tr>
+            <%= if @field.row_click do %>
+              <tr
+                role="row"
+                aria-selected="false"
+                phx-click="lamp_row_select"
+                phx-value-lamp-id={@lamp_id}
+                phx-value-row-id={Map.get(row, @field.row_id_key, "")}
+                phx-value-endpoint-id={@field.row_click_endpoint}
+                class="border-b border-slate-100 hover:bg-slate-50 cursor-pointer">
+                <%= for col <- (@field.columns || []) do %>
+                  <td class="px-3 py-2 text-slate-700">
+                    <%= Map.get(row, col.key, "") %>
+                  </td>
+                <% end %>
+              </tr>
+            <% else %>
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <%= for col <- (@field.columns || []) do %>
+                  <td class="px-3 py-2 text-slate-700">
+                    <%= Map.get(row, col.key, "") %>
+                  </td>
+                <% end %>
+              </tr>
+            <% end %>
           <% end %>
         </tbody>
       </table>
+    </div>
+    """
+  end
+
+  defp render_status_field(%{field: %{type: :detail_panel}} = assigns) do
+    item =
+      case Map.get(assigns.vars, assigns.field.value_key) do
+        m when is_map(m) -> m
+        _ -> assigns.vars
+      end
+
+    assigns = assign(assigns, :item, item)
+
+    ~H"""
+    <div
+      role="region"
+      aria-label={interpolate(@field.aria_label, @vars)}
+      class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <%= for col <- (@field.columns || []) do %>
+        <% val = Map.get(@item, col.key, "") %>
+        <div class="flex gap-3 px-4 py-2.5 border-b border-slate-100 last:border-0">
+          <span class="text-xs text-slate-500 font-medium w-32 flex-none pt-0.5"
+            aria-label={col.label}>
+            <%= col.label %>
+          </span>
+          <span class="text-[13px] text-slate-800 flex-1" aria-label={"#{col.label}: #{val}"}>
+            <%= val %>
+          </span>
+        </div>
+      <% end %>
     </div>
     """
   end

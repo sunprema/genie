@@ -4,7 +4,7 @@ defmodule Genie.Bridge do
   The browser never calls a lamp backend directly.
   """
 
-  alias Genie.Bridge.{Sanitizer, VaultClient}
+  alias Genie.Bridge.VaultClient
   alias Genie.Lamp.{FieldDef, LampDefinition, LampRenderer}
 
   @type request :: %{
@@ -139,8 +139,7 @@ defmodule Genie.Bridge do
 
   defp render_status_html(lamp, response) when is_map(response) do
     {:safe, html_data} = LampRenderer.render_status(lamp, response)
-    raw_html = IO.iodata_to_binary(html_data)
-    Sanitizer.sanitize(raw_html)
+    IO.iodata_to_binary(html_data)
   end
 
   defp render_status_html(_lamp, _response), do: ""

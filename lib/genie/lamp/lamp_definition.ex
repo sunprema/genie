@@ -72,6 +72,9 @@ defmodule Genie.Lamp.FieldDef do
     :action_id,
     :value_key,
     :columns,
+    :row_click,
+    :row_id_key,
+    :row_click_endpoint,
     value: nil
   ]
 end

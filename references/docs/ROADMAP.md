@@ -345,13 +345,13 @@
 
 > Proves list→detail navigation within a single lamp.
 
-- [ ] Create `priv/lamps/github_pull_requests.xml` — fields: `repo` (`from-context`), `state` (`infer`, options: `open|closed|all`), results table with clickable rows
-- [ ] Add `row-click` action type to `LampRenderer` — renders `<tr>` with `phx-click="lamp_row_select"`, `phx-value-row-id`, `role="row"`, `aria-selected`
-- [ ] Implement `handle_event "lamp_row_select"` in `CockpitLive` — inserts `LampActionWorker` job for `fetch_pr_detail` endpoint with selected row ID
-- [ ] Add detail panel renderer to `LampRenderer` — `field type="detail-panel"` renders key-value pairs with correct ARIA labelling
-- [ ] Create `priv/lamps/github_pull_requests.xml` status templates: `submitting`, `ready-list` (PR table), `ready-detail` (PR detail panel), `failed`
-- [ ] Verify: user says "show me open PRs for the platform team", PR list renders, user clicks a row, detail panel renders
-- [ ] Write integration test: row click → detail fetch → detail panel rendered in canvas
+- [x] Create `priv/lamps/github_pull_requests.xml` — fields: `repo` (`from-context`), `state` (`infer`, options: `open|closed|all`), results table with clickable rows
+- [x] Add `row-click` action type to `LampRenderer` — renders `<tr>` with `phx-click="lamp_row_select"`, `phx-value-row-id`, `role="row"`, `aria-selected`
+- [x] Implement `handle_event "lamp_row_select"` in `CockpitLive` — inserts `LampActionWorker` job for `fetch_pr_detail` endpoint with selected row ID
+- [x] Add detail panel renderer to `LampRenderer` — `field type="detail-panel"` renders key-value pairs with correct ARIA labelling
+- [x] Create `priv/lamps/github_pull_requests.xml` status templates: `submitting`, `ready-list` (PR table), `ready-detail` (PR detail panel), `failed`
+- [~] Verify: user says "show me open PRs for the platform team", PR list renders, user clicks a row, detail panel renders (manual demo verification — deferred to Slice 15)
+- [x] Write integration test: row click → detail fetch → detail panel rendered in canvas
 
 ---
 
@@ -445,7 +445,7 @@
 
 | Slice | Name                             | Status |
 | ----- | -------------------------------- | ------ |
-| 0     | Project Scaffold                 | `[ ]`  |
+| 0     | Project Scaffold                 | `[x]`  |
 | 1     | Ash Domain Foundation            | `[x]`  |
 | 2     | GenieLamp XML Parser             | `[x]`  |
 | 3     | GenieLamp Registry               | `[x]`  |

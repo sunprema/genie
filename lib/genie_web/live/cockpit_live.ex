@@ -69,6 +69,23 @@ defmodule GenieWeb.CockpitLive do
     {:noreply, push_event(socket, "lamp_loading", %{})}
   end
 
+  def handle_event("lamp_row_select", %{"lamp-id" => lamp_id, "row-id" => row_id, "endpoint-id" => endpoint_id}, socket) do
+    session_id = socket.assigns.session_id
+    actor_id = socket.assigns[:current_user] && socket.assigns.current_user.id
+
+    %{
+      "lamp_id" => lamp_id,
+      "endpoint_id" => endpoint_id,
+      "params" => %{"id" => row_id},
+      "actor_id" => actor_id,
+      "session_id" => session_id
+    }
+    |> LampActionWorker.new()
+    |> Oban.insert()
+
+    {:noreply, push_event(socket, "lamp_loading", %{})}
+  end
+
   def handle_event("lamp_toggle", %{"field" => field_id, "value" => value}, socket) do
     lamp_field_values = Map.put(socket.assigns.lamp_field_values, field_id, value)
     {:noreply, assign(socket, lamp_field_values: lamp_field_values)}
