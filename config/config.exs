@@ -12,7 +12,7 @@ config :ash_oban, pro?: false
 config :genie, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10],
+  queues: [orchestrator: 5, lamp_actions: 10, approvals: 5, notifications: 5],
   repo: Genie.Repo,
   plugins: [{Oban.Plugins.Cron, []}]
 
@@ -64,7 +64,7 @@ config :spark,
 config :genie,
   ecto_repos: [Genie.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Genie.Accounts, Genie.Conversation, Genie.Audit, Genie.Lamp]
+  ash_domains: [Genie.Accounts, Genie.Conversation, Genie.Audit, Genie.Lamp, Genie.Conductor]
 
 # Configure the endpoint
 config :genie, GenieWeb.Endpoint,

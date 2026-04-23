@@ -167,22 +167,22 @@
 
 > Secure proxy between Cockpit and lamp backends. No lamp actions wired to UI yet.
 
-- [ ] Implement `Genie.Bridge.execute/1` — validates endpoint declaration, retrieves scoped token, interpolates path params, POSTs JSON to lamp backend via `Req`, returns rendered status template HTML
-- [ ] Implement `Genie.Bridge.fetch_options/2` — GETs options endpoint, maps response using `options_value_key` and `options_label_key`
-- [ ] Implement `Genie.Bridge.execute_tool/1` — executes Tool call (LLM data gathering), returns raw JSON result
-- [ ] Implement `Genie.Bridge.Sanitizer.sanitize/1` — strict HTML allowlist (see `REQUIREMENTS.md §6.6`), strips all disallowed elements and attributes, HTML-entity-encodes attribute values
-- [ ] Implement `Genie.Bridge.VaultClient.get_scoped_token/1` — retrieves temporary scoped credential for the lamp's auth scheme
-- [ ] Implement endpoint declaration enforcement — reject with `{:error, :undeclared_endpoint}` if `{lamp_id, endpoint_id}` not in registry
-- [ ] Add `X-Genie-Trace-Id` header to all outbound requests using current OTel trace ID
-- [ ] Add `X-Genie-Session` header to all outbound requests
-- [ ] Enforce `timeout_ms` from lamp meta on every Req call
-- [ ] Write unit test: `execute/1` with a valid declared endpoint succeeds
-- [ ] Write unit test: `execute/1` with an undeclared endpoint returns `{:error, :undeclared_endpoint}`
-- [ ] Write unit test: `Sanitizer.sanitize/1` strips `<script>` tags
-- [ ] Write unit test: `Sanitizer.sanitize/1` strips `javascript:` href values
-- [ ] Write unit test: `Sanitizer.sanitize/1` strips `on*` event handler attributes
-- [ ] Write unit test: `Sanitizer.sanitize/1` allows `aria-*` attributes through
-- [ ] Write unit test: `fetch_options/2` maps response correctly using configured keys
+- [x] Implement `Genie.Bridge.execute/1` — validates endpoint declaration, retrieves scoped token, interpolates path params, POSTs JSON to lamp backend via `Req`, returns rendered status template HTML
+- [x] Implement `Genie.Bridge.fetch_options/2` — GETs options endpoint, maps response using `options_value_key` and `options_label_key`
+- [x] Implement `Genie.Bridge.execute_tool/1` — executes Tool call (LLM data gathering), returns raw JSON result
+- [x] Implement `Genie.Bridge.Sanitizer.sanitize/1` — strict HTML allowlist (see `REQUIREMENTS.md §6.6`), strips all disallowed elements and attributes, HTML-entity-encodes attribute values
+- [x] Implement `Genie.Bridge.VaultClient.get_scoped_token/1` — retrieves temporary scoped credential for the lamp's auth scheme
+- [x] Implement endpoint declaration enforcement — reject with `{:error, :undeclared_endpoint}` if `{lamp_id, endpoint_id}` not in registry
+- [x] Add `X-Genie-Trace-Id` header to all outbound requests using current OTel trace ID
+- [x] Add `X-Genie-Session` header to all outbound requests
+- [x] Enforce `timeout_ms` from lamp meta on every Req call
+- [x] Write unit test: `execute/1` with a valid declared endpoint succeeds
+- [x] Write unit test: `execute/1` with an undeclared endpoint returns `{:error, :undeclared_endpoint}`
+- [x] Write unit test: `Sanitizer.sanitize/1` strips `<script>` tags
+- [x] Write unit test: `Sanitizer.sanitize/1` strips `javascript:` href values
+- [x] Write unit test: `Sanitizer.sanitize/1` strips `on*` event handler attributes
+- [x] Write unit test: `Sanitizer.sanitize/1` allows `aria-*` attributes through
+- [x] Write unit test: `fetch_options/2` maps response correctly using configured keys
 
 ---
 
@@ -190,15 +190,15 @@
 
 > Ash action pipeline that validates and authorises every lamp action before execution.
 
-- [ ] Define `Genie.Conductor.LampAction` Ash resource with attributes: `id`, `lamp_id`, `endpoint_id`, `params` (`:map`), `actor_id`, `session_id`, `requires_approval`, `status`, `oban_job_id`, `inserted_at`
-- [ ] Write migration for `LampAction`
-- [ ] Implement `Genie.Conductor.build_action/3` — casts `lamp_id`, `endpoint_id`, `params` through Ash changeset, validates required fields, checks RBAC policy via `Ash.run_action`
-- [ ] Implement Ash policy on `LampAction`: actor must belong to the lamp's enabled org, actor must have the required role for the lamp's declared permission level
-- [ ] Implement `Genie.Conductor.execute/1` — calls `AppBridge.execute/1` with validated `%LampAction{}`
-- [ ] Write unit test: `build_action/3` with valid params and authorised actor returns `{:ok, %LampAction{}}`
-- [ ] Write unit test: `build_action/3` with unauthorised actor returns `{:error, %Ash.Error.Forbidden{}}`
-- [ ] Write unit test: `build_action/3` with missing required param returns `{:error, %Ash.Error.Invalid{}}`
-- [ ] Write unit test: `execute/1` calls Bridge with the correct endpoint
+- [x] Define `Genie.Conductor.LampAction` Ash resource with attributes: `id`, `lamp_id`, `endpoint_id`, `params` (`:map`), `actor_id`, `session_id`, `requires_approval`, `status`, `oban_job_id`, `inserted_at`
+- [x] Write migration for `LampAction`
+- [x] Implement `Genie.Conductor.build_action/3` — casts `lamp_id`, `endpoint_id`, `params` through Ash changeset, validates required fields, checks RBAC policy via `Ash.run_action`
+- [x] Implement Ash policy on `LampAction`: actor must belong to the lamp's enabled org, actor must have the required role for the lamp's declared permission level
+- [x] Implement `Genie.Conductor.execute/1` — calls `AppBridge.execute/1` with validated `%LampAction{}`
+- [x] Write unit test: `build_action/3` with valid params and authorised actor returns `{:ok, %LampAction{}}`
+- [x] Write unit test: `build_action/3` with unauthorised actor returns `{:error, %Ash.Error.Forbidden{}}`
+- [x] Write unit test: `build_action/3` with missing required param returns `{:error, %Ash.Error.Invalid{}}`
+- [x] Write unit test: `execute/1` calls Bridge with the correct endpoint
 
 ---
 
@@ -206,13 +206,13 @@
 
 > Background job workers. Orchestrator and lamp action execution are decoupled from the LiveView process.
 
-- [ ] Configure Oban in `config.exs` with queues: `orchestrator: 5`, `lamp_actions: 10`, `approvals: 5`, `notifications: 5`
-- [ ] Implement `Genie.Workers.OrchestratorWorker` — Oban worker stub that accepts `session_id`, `user_message`, `actor_id`; logs receipt; returns `:ok`. Full Reactor wiring in Slice 9.
-- [ ] Implement `Genie.Workers.LampActionWorker` — calls `LampRegistry.fetch_lamp/1`, calls `Conductor.build_action/3`, calls `Bridge.execute/1`, calls `CockpitLive.push_canvas/2` with result HTML or error
-- [ ] Implement `Genie.Workers.ApprovalWorker` — stub that accepts `action_id`, `approver_id`; on approval re-inserts `OrchestratorWorker` job with approval result; on denial writes to `AuditLog` and calls `CockpitLive.push_error/2`
-- [ ] Write unit test: `LampActionWorker.perform/1` with a mock Bridge returns `:ok` and calls `push_canvas`
-- [ ] Write unit test: `LampActionWorker.perform/1` with a Bridge error calls `push_error`
-- [ ] Write unit test: `ApprovalWorker.perform/1` on denial writes a denied `AuditLog` entry
+- [x] Configure Oban in `config.exs` with queues: `orchestrator: 5`, `lamp_actions: 10`, `approvals: 5`, `notifications: 5`
+- [x] Implement `Genie.Workers.OrchestratorWorker` — Oban worker stub that accepts `session_id`, `user_message`, `actor_id`; logs receipt; returns `:ok`. Full Reactor wiring in Slice 9.
+- [x] Implement `Genie.Workers.LampActionWorker` — calls `LampRegistry.fetch_lamp/1`, calls `Conductor.build_action/3`, calls `Bridge.execute/1`, calls `CockpitLive.push_canvas/2` with result HTML or error
+- [x] Implement `Genie.Workers.ApprovalWorker` — stub that accepts `action_id`, `approver_id`; on approval re-inserts `OrchestratorWorker` job with approval result; on denial writes to `AuditLog` and calls `CockpitLive.push_error/2`
+- [x] Write unit test: `LampActionWorker.perform/1` with a mock Bridge returns `:ok` and calls `push_canvas`
+- [x] Write unit test: `LampActionWorker.perform/1` with a Bridge error calls `push_error`
+- [x] Write unit test: `ApprovalWorker.perform/1` on denial writes a denied `AuditLog` entry
 
 ---
 
@@ -450,9 +450,9 @@
 | 2     | GenieLamp XML Parser             | `[x]`  |
 | 3     | GenieLamp Registry               | `[x]`  |
 | 4     | GenieLamp Renderer               | `[x]`  |
-| 5     | Application Bridge               | `[ ]`  |
-| 6     | Conductor — Action Validation    | `[ ]`  |
-| 7     | Oban Workers                     | `[ ]`  |
+| 5     | Application Bridge               | `[x]`  |
+| 6     | Conductor — Action Validation    | `[x]`  |
+| 7     | Oban Workers                     | `[x]`  |
 | 8     | Phoenix LiveView Cockpit         | `[ ]`  |
 | 9     | Ash Reactor — Reasoning Loop     | `[ ]`  |
 | 10    | Lamp 1: EC2 Instance Viewer      | `[ ]`  |
