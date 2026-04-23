@@ -31,10 +31,15 @@ defmodule GenieWeb.Router do
   end
 
   scope "/", GenieWeb do
+    pipe_through :api
+
+    post "/webhooks/:lamp_id", WebhookController, :create
+  end
+
+  scope "/", GenieWeb do
     pipe_through :browser
 
     get "/", PageController, :home
-    post "/webhooks/:lamp_id", WebhookController, :create
 
     auth_routes AuthController, Genie.Accounts.User, path: "/auth"
     sign_out_route AuthController
@@ -100,7 +105,10 @@ defmodule GenieWeb.Router do
       pipe_through :api
 
       get "/aws/regions", MockBackendController, :regions
+      post "/aws/s3/buckets", MockBackendController, :create_s3_bucket
+      get "/aws/s3/buckets/:bucket_name/status", MockBackendController, :s3_bucket_status
       get "/aws/ec2/instances", MockBackendController, :ec2_instances
+      get "/pagerduty/incidents", MockBackendController, :pagerduty_incidents
     end
   end
 

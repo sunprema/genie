@@ -37,7 +37,7 @@
   </label>
   <select class="h-9 w-full border rounded-lg px-3 bg-white font-sans text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-blue-50 transition appearance-none cursor-pointer border-teal-300 bg-teal-50/50" aria-label="AWS region where the bucket will be created" aria-required="true" name="region">
   
-    <option value="">Select...</option>
+      <option value="">Select...</option>
   
 </select>
     
@@ -83,20 +83,20 @@
   </label>
   <select class="h-9 w-full border rounded-lg px-3 bg-white font-sans text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-blue-50 transition appearance-none cursor-pointer border-purple-300 bg-purple-50/50" aria-label="S3 bucket access control, whether the bucket is private or publicly readable" aria-required="true" name="access">
   
+      
+        <option value="private" selected>
+          Private
+        </option>
+      
+        <option value="public-read">
+          Public Read
+        </option>
+      
+        <option value="authenticated-read">
+          Authenticated Read
+        </option>
+      
     
-      <option value="private" selected>
-        Private
-      </option>
-    
-      <option value="public-read">
-        Public Read
-      </option>
-    
-      <option value="authenticated-read">
-        Authenticated Read
-      </option>
-    
-  
 </select>
     
   
@@ -216,20 +216,20 @@
   </label>
   <select class="h-9 w-full border rounded-lg px-3 bg-white font-sans text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-blue-50 transition appearance-none cursor-pointer border-slate-200" aria-label="S3 storage class that determines pricing and availability characteristics" aria-required="false" name="storage_class">
   
+      
+        <option value="STANDARD" selected>
+          Standard
+        </option>
+      
+        <option value="STANDARD_IA">
+          Standard-IA
+        </option>
+      
+        <option value="GLACIER">
+          Glacier
+        </option>
+      
     
-      <option value="STANDARD" selected>
-        Standard
-      </option>
-    
-      <option value="STANDARD_IA">
-        Standard-IA
-      </option>
-    
-      <option value="GLACIER">
-        Glacier
-      </option>
-    
-  
 </select>
     
   

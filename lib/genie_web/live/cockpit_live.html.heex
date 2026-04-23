@@ -172,6 +172,23 @@
 
     <%!-- Canvas --%>
     <section class="ck-canvas" aria-label="Canvas">
+      <%= if @pending_approval do %>
+        <div class="ck-approval-bar" role="alert" aria-label="Action pending approval" aria-live="assertive">
+          <span class="ck-approval-msg">This action requires approval</span>
+          <button
+            type="button"
+            phx-click="approve_action"
+            class="ck-btn-approve"
+            aria-label="Approve the pending action"
+          >Approve</button>
+          <button
+            type="button"
+            phx-click="deny_action"
+            class="ck-btn-deny"
+            aria-label="Deny the pending action"
+          >Deny</button>
+        </div>
+      <% end %>
       <div class="ck-canvas-head">
         <div class="tabs">
           <button type="button" class="ck-tab active">

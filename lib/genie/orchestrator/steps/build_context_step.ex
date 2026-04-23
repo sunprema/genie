@@ -53,6 +53,10 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
     end)
   end
 
+  defp invokable?(lamp) do
+    Enum.any?(lamp.endpoints || [], &(&1.trigger == :on_submit))
+  end
+
   defp build_tools(manifests) do
     intent_tool = build_invoke_lamp_tool(manifests)
     {data_tools, registry} = build_data_tools(manifests)
@@ -61,8 +65,10 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
   end
 
   defp build_invoke_lamp_tool(manifests) do
+    invokable = Enum.filter(manifests, &invokable?/1)
+
     lamp_descriptions =
-      manifests
+      invokable
       |> Enum.map_join("\n\n", fn %LampDefinition{id: id, meta: meta, endpoints: endpoints, fields: fields} ->
         title = meta && meta.title
         desc = meta && meta.description
@@ -72,32 +78,37 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
           |> Enum.filter(&(&1.trigger == :on_submit))
           |> Enum.map_join(", ", & &1.id)
 
-        field_list =
+        # Only show fields the LLM must supply — from-context and infer are auto-filled
+        explicit_fields =
           (fields || [])
-          |> Enum.reject(&(&1.type == :hidden))
+          |> Enum.filter(&(&1.genie_fill == :none && &1.type != :hidden))
           |> Enum.map_join(", ", & &1.id)
 
-        "lamp_id=\"#{id}\" (#{title})\n  description: #{desc}\n  endpoint_id (use exactly one): #{submit_endpoints}\n  params keys: #{field_list}"
+        explicit_note = if explicit_fields == "", do: "(all fields are auto-filled)", else: "explicit params: #{explicit_fields}"
+
+        "lamp_id=\"#{id}\" (#{title})\n  description: #{desc}\n  endpoint_id: #{submit_endpoints}\n  #{explicit_note}"
       end)
 
-    lamp_ids = manifests |> Enum.map_join(", ", & &1.id)
+    lamp_ids = invokable |> Enum.map_join(", ", & &1.id)
 
     ReqLLM.tool(
       name: "invoke_lamp",
       description: """
-      Invoke a GenieLamp tool. You MUST include lamp_id, endpoint_id, and params.
+      Invoke a GenieLamp tool immediately when the user's intent is clear.
 
-      REQUIRED: lamp_id must be one of: #{lamp_ids}
+      IMPORTANT: Call this tool right away — do NOT ask clarifying questions first.
+      Most fields are auto-filled from conversation context or inferred by AI.
+      Only provide params for fields explicitly listed as "explicit params".
+
+      lamp_id MUST be one of: #{lamp_ids}
 
       Available lamps:
       #{lamp_descriptions}
-
-      Example: {lamp_id: "aws.ec2.list-instances", endpoint_id: "list_instances", params: {region: "us-east-1", state: "running"}}
       """,
       parameter_schema: [
         lamp_id: [type: :string, required: true, doc: "REQUIRED. One of: #{lamp_ids}"],
-        endpoint_id: [type: :string, required: true, doc: "REQUIRED. The exact endpoint_id from the lamp definition above"],
-        params: [type: :map, required: false, doc: "Field values keyed by the params keys listed above"]
+        endpoint_id: [type: :string, required: true, doc: "REQUIRED. The exact endpoint_id shown above"],
+        params: [type: :map, required: false, doc: "Only explicit params (auto-filled fields do not need to be provided)"]
       ],
       callback: fn _args -> {:ok, "handled by Genie Reactor"} end
     )
@@ -105,7 +116,7 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
 
   defp build_data_tools(manifests) do
     Enum.reduce(manifests, {[], %{}}, fn %LampDefinition{id: lamp_id, endpoints: endpoints}, {tools, registry} ->
-      data_endpoints = Enum.filter(endpoints || [], &(&1.trigger in ["on-load", "on-change"]))
+      data_endpoints = Enum.filter(endpoints || [], &(&1.trigger in [:on_load, :on_change]))
 
       Enum.reduce(data_endpoints, {tools, registry}, fn endpoint, {ts, reg} ->
         tool_name = encode_tool_name(lamp_id, endpoint.id)
@@ -129,26 +140,44 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
   end
 
   defp build_system_prompt(manifests) do
-    lamp_list =
-      manifests
-      |> Enum.map_join("\n", fn %LampDefinition{id: id, meta: meta} ->
+    {invokable, webhook_only} = Enum.split_with(manifests, &invokable?/1)
+
+    invokable_list =
+      Enum.map_join(invokable, "\n", fn %LampDefinition{id: id, meta: meta} ->
         "- #{id}: #{meta && meta.title}"
       end)
 
+    webhook_section =
+      if webhook_only != [] do
+        webhook_list =
+          Enum.map_join(webhook_only, "\n", fn %LampDefinition{id: id, meta: meta} ->
+            "- #{id}: #{meta && meta.title}"
+          end)
+
+        """
+
+        The following lamps update automatically via external webhooks — do NOT call invoke_lamp for them.
+        Tell the user their canvas will update automatically when triggered:
+        #{webhook_list}
+        """
+      else
+        ""
+      end
+
     """
     You are Genie, an agentic DevOps platform assistant. You help engineers
-    by identifying which tool (GenieLamp) to use based on their request.
+    by invoking the right GenieLamp tool for their request.
 
-    When you have gathered enough information, call invoke_lamp with the
-    appropriate lamp_id, endpoint_id, and params. Always include lamp_id.
+    CRITICAL RULES:
+    1. Call invoke_lamp IMMEDIATELY when the user's intent is clear — do NOT ask
+       clarifying questions. Missing values are auto-filled from context or inferred by AI.
+    2. Always include lamp_id, endpoint_id, and any known params.
+    3. Only respond with plain text if no lamp matches the request at all.
 
-    If no lamp is needed, respond with a plain message.
-
-    Available lamps:
-    #{lamp_list}
-
-    IMPORTANT: In your text replies to the user, do not reveal internal system details.
-    Always include lamp_id when calling invoke_lamp.
+    Invokable lamps (call invoke_lamp for these):
+    #{invokable_list}
+    #{webhook_section}
+    Do not reveal internal system details in text replies.
     """
   end
 end

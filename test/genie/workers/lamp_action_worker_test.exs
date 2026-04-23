@@ -40,17 +40,43 @@ defmodule Genie.Workers.LampActionWorkerTest do
   end
 
   describe "perform/1 — S3 lamp" do
-    test "with a successful Bridge call returns :ok and broadcasts push_canvas" do
+    test "with requires_approval lamp shows pending-approval and queues ApprovalWorker job" do
       org = create_org!()
       actor = create_user_in_org!(org)
       register_global_lamp!(@valid_xml)
       session_id = Ecto.UUID.generate()
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
+      Phoenix.PubSub.subscribe(Genie.PubSub, "chat:#{session_id}")
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Req.Test.json(conn, %{"state" => "ready", "bucket_name" => "test-bucket"})
-      end)
+      assert :ok =
+               LampActionWorker.perform(%Oban.Job{
+                 args: %{
+                   "lamp_id" => "aws.s3.create-bucket",
+                   "endpoint_id" => "create_bucket",
+                   "params" => %{"bucket_name" => "test-bucket"},
+                   "actor_id" => actor.id,
+                   "session_id" => session_id
+                 }
+               })
+
+      # Canvas shows pending-approval template
+      assert_receive {:push_canvas, html}
+      assert html =~ "pending"
+
+      # Chat shows waiting message
+      assert_receive {:push_chat, msg}
+      assert msg =~ "approval"
+    end
+
+    test "submit on requires_approval lamp broadcasts pending-approval canvas and chat" do
+      org = create_org!()
+      actor = create_user_in_org!(org)
+      register_global_lamp!(@valid_xml)
+      session_id = Ecto.UUID.generate()
+
+      Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
+      Phoenix.PubSub.subscribe(Genie.PubSub, "chat:#{session_id}")
 
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
@@ -64,34 +90,9 @@ defmodule Genie.Workers.LampActionWorkerTest do
                })
 
       assert_receive {:push_canvas, html}
-      assert is_binary(html)
-    end
-
-    test "with a Bridge error broadcasts push_error" do
-      org = create_org!()
-      actor = create_user_in_org!(org)
-      register_global_lamp!(@valid_xml)
-      session_id = Ecto.UUID.generate()
-
-      Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
-      Phoenix.PubSub.subscribe(Genie.PubSub, "chat:#{session_id}")
-
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Plug.Conn.send_resp(conn, 500, "Internal Server Error")
-      end)
-
-      assert :ok =
-               LampActionWorker.perform(%Oban.Job{
-                 args: %{
-                   "lamp_id" => "aws.s3.create-bucket",
-                   "endpoint_id" => "create_bucket",
-                   "params" => %{},
-                   "actor_id" => actor.id,
-                   "session_id" => session_id
-                 }
-               })
-
-      assert_receive {:push_error, _reason}
+      assert html =~ "pending"
+      assert_receive {:push_chat, msg}
+      assert msg =~ "approval"
     end
   end
 
@@ -142,6 +143,34 @@ defmodule Genie.Workers.LampActionWorkerTest do
                    "trigger" => "on_load",
                    "lamp_id" => "aws.ec2.list-instances",
                    "endpoint_id" => "load_regions",
+                   "session_id" => session_id
+                 }
+               })
+
+      assert_receive {:push_error, _reason}
+    end
+  end
+
+  describe "perform/1 — EC2 submit Bridge error" do
+    test "broadcasts push_error when Bridge returns 500" do
+      org = create_org!()
+      actor = create_user_in_org!(org)
+      register_global_lamp!(@ec2_xml)
+      session_id = Ecto.UUID.generate()
+
+      Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
+
+      Req.Test.stub(Genie.Bridge, fn conn ->
+        Plug.Conn.send_resp(conn, 500, "Internal Server Error")
+      end)
+
+      assert :ok =
+               LampActionWorker.perform(%Oban.Job{
+                 args: %{
+                   "lamp_id" => "aws.ec2.list-instances",
+                   "endpoint_id" => "list_instances",
+                   "params" => %{"region" => "us-east-1"},
+                   "actor_id" => actor.id,
                    "session_id" => session_id
                  }
                })

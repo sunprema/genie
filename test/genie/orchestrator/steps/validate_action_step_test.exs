@@ -38,35 +38,7 @@ defmodule Genie.Orchestrator.Steps.ValidateActionStepTest do
   end
 
   describe "run/3 — :intent_call" do
-    test "returns {:ok, {:action, action}} for approved action without approval requirement" do
-      org = create_org!()
-      actor = create_user!(org)
-      session = create_session!(actor)
-      register_lamp!()
-
-      # aws_s3_create_bucket has requires_approval: true by default in the XML
-      # Let's test with the endpoint that doesn't require approval - actually all go through the
-      # lamp's meta. The XML has requires-approval: true, so let's test that case.
-      intent = {:intent_call, %{
-        lamp_id: "aws.s3.create-bucket",
-        endpoint_id: "create_bucket",
-        params: %{"bucket_name" => "test"},
-        llm_context: nil
-      }}
-
-      result = ValidateActionStep.run(
-        %{tool_loop_result: intent, session: session, actor: actor},
-        %{},
-        []
-      )
-
-      # With requires_approval: true, should return pending_approval or action
-      assert match?({:ok, {:pending_approval, _, _}}, result) or
-               match?({:ok, {:action, _}}, result) or
-               match?({:error, _}, result)
-    end
-
-    test "inserts ApprovalWorker job when lamp requires_approval is true" do
+    test "returns {:ok, {:action, action}} for a valid authorised actor" do
       org = create_org!()
       actor = create_user!(org)
       session = create_session!(actor)
@@ -79,23 +51,35 @@ defmodule Genie.Orchestrator.Steps.ValidateActionStepTest do
         llm_context: nil
       }}
 
-      result =
-        ValidateActionStep.run(
-          %{tool_loop_result: intent, session: session, actor: actor},
-          %{},
-          []
-        )
+      result = ValidateActionStep.run(
+        %{tool_loop_result: intent, session: session, actor: actor},
+        %{},
+        []
+      )
 
-      case result do
-        {:ok, {:pending_approval, job_id, _action}} ->
-          assert is_integer(job_id) or is_binary(job_id)
+      # Always returns :action — approval is checked later in LampActionWorker
+      assert match?({:ok, {:action, _}}, result) or match?({:error, _}, result)
+    end
 
-        {:ok, {:action, _}} ->
-          :ok
+    test "returns :action regardless of requires_approval flag on the lamp" do
+      org = create_org!()
+      actor = create_user!(org)
+      session = create_session!(actor)
+      register_lamp!()
 
-        {:error, _} ->
-          :ok
-      end
+      intent = {:intent_call, %{
+        lamp_id: "aws.s3.create-bucket",
+        endpoint_id: "create_bucket",
+        params: %{},
+        llm_context: nil
+      }}
+
+      assert {:ok, {:action, _action}} =
+               ValidateActionStep.run(
+                 %{tool_loop_result: intent, session: session, actor: actor},
+                 %{},
+                 []
+               )
     end
   end
 

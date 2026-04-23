@@ -27,6 +27,7 @@ defmodule Genie.Orchestrator.Steps.PushCockpitStepTest do
                  %{
                    ui_result: %{type: :canvas, html: html, lamp_id: "aws.s3.create-bucket"},
                    session_id: session_id,
+                   user_message: "create a bucket",
                    actor: actor
                  },
                  %{},
@@ -54,6 +55,7 @@ defmodule Genie.Orchestrator.Steps.PushCockpitStepTest do
                  %{
                    ui_result: %{type: :chat, message: "Agent response", html: nil, lamp_id: nil},
                    session_id: session_id,
+                   user_message: "hello",
                    actor: actor
                  },
                  %{},

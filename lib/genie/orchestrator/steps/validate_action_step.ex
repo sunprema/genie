@@ -7,8 +7,6 @@ defmodule Genie.Orchestrator.Steps.ValidateActionStep do
   use Reactor.Step
 
   alias Genie.Conductor
-  alias Genie.Lamp.LampRegistry
-  alias Genie.Workers.ApprovalWorker
 
   @impl Reactor.Step
   def run(%{tool_loop_result: {:intent_call, intent_data}, session: session, actor: actor}, _context, _options) do
@@ -20,19 +18,8 @@ defmodule Genie.Orchestrator.Steps.ValidateActionStep do
            Conductor.build_action(lamp_id, endpoint_id, params,
              actor: actor,
              session_id: session.id
-           ),
-         {:ok, lamp} <- LampRegistry.fetch_lamp(lamp_id) do
-      if lamp.meta && lamp.meta.requires_approval do
-        case insert_approval_job(action) do
-          {:ok, %{id: job_id}} ->
-            {:ok, {:pending_approval, job_id, action}}
-
-          {:error, _} = error ->
-            error
-        end
-      else
-        {:ok, {:action, action}}
-      end
+           ) do
+      {:ok, {:action, action}}
     end
   end
 
@@ -42,14 +29,4 @@ defmodule Genie.Orchestrator.Steps.ValidateActionStep do
 
   @impl Reactor.Step
   def compensate(_reason, _arguments, _context, _options), do: :ok
-
-  defp insert_approval_job(action) do
-    %{
-      "action_id" => to_string(action.id),
-      "approver_id" => nil,
-      "decision" => "pending"
-    }
-    |> ApprovalWorker.new()
-    |> Oban.insert()
-  end
 end

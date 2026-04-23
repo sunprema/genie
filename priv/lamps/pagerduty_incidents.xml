@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lamp
+  id="pagerduty.incidents.list"
+  version="1.0"
+  category="incidents"
+  vendor="pagerduty">
+
+  <meta>
+    <title>PagerDuty Active Incidents</title>
+    <description>Live feed of active PagerDuty incidents. Canvas updates automatically on webhook trigger without user action.</description>
+    <icon>pagerduty</icon>
+    <tags>pagerduty,incidents,on-call,alerting,ops</tags>
+    <requires-approval>false</requires-approval>
+    <destructive>false</destructive>
+    <audit>true</audit>
+    <base-url>http://localhost:4000/genie</base-url>
+    <auth-scheme>bearer</auth-scheme>
+    <timeout-ms>10000</timeout-ms>
+  </meta>
+
+  <endpoints>
+    <endpoint
+      id="list_incidents"
+      method="GET"
+      path="/pagerduty/incidents"
+      trigger="webhook"/>
+  </endpoints>
+
+  <ui>
+    <form
+      aria-label="PagerDuty Incident Feed"
+      aria-describedby="form-pd-description">
+
+      <description id="form-pd-description">
+        This panel updates automatically when PagerDuty fires a webhook. No user action required.
+      </description>
+
+      <field
+        id="source"
+        type="hidden"
+        aria-label="Data source identifier"
+        genie-fill="none"/>
+
+    </form>
+  </ui>
+
+  <status-templates>
+
+    <template state="loading">
+      <field type="spinner"
+        label="Fetching active incidents..."
+        aria-label="Loading PagerDuty incidents"
+        style="info"/>
+    </template>
+
+    <template state="ready">
+      <field type="banner"
+        aria-label="Active incidents: {count} open"
+        label="Active Incidents"
+        value="{count} active incident(s)"
+        style="warning"/>
+      <field type="table"
+        aria-label="List of active PagerDuty incidents"
+        value-key="incidents">
+        <column key="title" label="Incident"/>
+        <column key="severity" label="Severity"/>
+        <column key="service" label="Service"/>
+        <column key="status" label="Status"/>
+        <column key="created_at" label="Created"/>
+      </field>
+    </template>
+
+    <template state="no_incidents">
+      <field type="banner"
+        aria-label="No active incidents at this time"
+        label="All Clear"
+        value="No active incidents — all systems operational."
+        style="success"/>
+    </template>
+
+    <template state="failed">
+      <field type="banner"
+        aria-label="Failed to load incidents: {error}"
+        label="Error"
+        value="Failed to load incidents: {error}"
+        style="error"/>
+    </template>
+
+  </status-templates>
+
+</lamp>

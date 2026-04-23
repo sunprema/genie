@@ -24,6 +24,10 @@ if llm_model = System.get_env("GENIE_LLM_MODEL") do
   config :genie, llm_model: llm_model
 end
 
+if secret = System.get_env("PAGERDUTY_WEBHOOK_SECRET") do
+  config :genie, pagerduty_webhook_secret: secret
+end
+
 config :genie, GenieWeb.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 if config_env() == :prod do

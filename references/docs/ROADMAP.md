@@ -311,14 +311,14 @@
 
 > Proves proactive agent behaviour — canvas updates on webhook without user action.
 
-- [ ] Create `priv/lamps/pagerduty_incidents.xml` — no user-fillable fields, auto-loads on webhook trigger
-- [ ] Implement `GenieWeb.WebhookController.create/2` — verifies HMAC signature, identifies `lamp_id` from path, inserts `LampActionWorker` job with `trigger: :webhook`
-- [ ] Add webhook signature verification — reject requests with invalid `X-PagerDuty-Signature` header
-- [ ] Wire webhook trigger in `LampActionWorker` — on `:webhook` trigger, fetch incident data from Bridge, push rendered HTML to all active sessions for the org
-- [ ] Add incident severity badge renderer to `LampRenderer` — `field type="banner"` with `style` mapped to CSS class
-- [ ] Create mock PagerDuty webhook payload fixture
-- [ ] Verify: POST mock webhook to `/webhooks/pagerduty`, canvas in all active org sessions updates with incident list without user interaction
-- [ ] Write integration test: webhook POST → `LampActionWorker` → `push_canvas` broadcast to correct org sessions
+- [x] Create `priv/lamps/pagerduty_incidents.xml` — no user-fillable fields, auto-loads on webhook trigger
+- [x] Implement `GenieWeb.WebhookController.create/2` — verifies HMAC signature, identifies `lamp_id` from path, inserts `LampActionWorker` job with `trigger: :webhook`
+- [x] Add webhook signature verification — reject requests with invalid `X-PagerDuty-Signature` header
+- [x] Wire webhook trigger in `LampActionWorker` — on `:webhook` trigger, fetch incident data from Bridge, push rendered HTML to all active sessions for the org
+- [x] Add incident severity badge renderer to `LampRenderer` — `field type="banner"` with `style` mapped to CSS class (was already implemented)
+- [x] Create mock PagerDuty webhook payload fixture
+- [~] Verify: POST mock webhook to `/webhooks/pagerduty`, canvas in all active org sessions updates with incident list without user interaction (manual demo verification — deferred to Slice 15)
+- [x] Write integration test: webhook POST → `LampActionWorker` → `push_canvas` broadcast to correct org sessions
 
 ---
 
@@ -326,18 +326,18 @@
 
 > The centrepiece demo lamp. Full write path, from-context fill, approval workflow, poll-status.
 
-- [ ] Create `priv/lamps/aws_s3_create_bucket.xml` — full schema per `REQUIREMENTS.md §5` with all field types, `requires-approval: true`, three endpoints: `load_regions`, `create_bucket`, `poll_status`
-- [ ] Implement poll-status loop in `LampActionWorker` — after submit, poll `poll_status` endpoint at `poll_interval_ms`, stop when `poll_until` condition met or timeout reached, push status template update on each poll result
-- [ ] Implement approval UI — when `ValidateActionStep` returns `{:pending_approval, job_id}`, push `pending-approval` status template to canvas, push "Waiting for approval from @{approver}" to chat
-- [ ] Implement approver notification — `push_chat` with approval request to approver's active session
-- [ ] Implement approval accept/deny LiveView events — `handle_event "approve_action"` and `handle_event "deny_action"` trigger `ApprovalWorker` with decision
-- [ ] Wire `from-context` fill: `region` and `org_id` extracted from conversation context entities map without LLM call
-- [ ] Wire `infer` fill: `bucket_name`, `access`, `versioning` sent to LLM as typed schema
-- [ ] Verify demo sequence: user types "Create a private versioned bucket called acme-prod-assets in us-east-1" → form pre-filled → approval → bucket created → console link shown
-- [ ] Write integration test: full demo sequence with mocked LLM and Bridge — assert each status template rendered in correct order
-- [ ] Write integration test: `from-context` fields populated without LLM call
-- [ ] Write integration test: poll-status loop terminates on `status=ready`
-- [ ] Write integration test: approval denial writes denied `AuditLog` entry and notifies requester
+- [x] Create `priv/lamps/aws_s3_create_bucket.xml` — full schema per `REQUIREMENTS.md §5` with all field types, `requires-approval: true`, three endpoints: `load_regions`, `create_bucket`, `poll_status`
+- [x] Implement poll-status loop in `LampActionWorker` — after submit, poll `poll_status` endpoint at `poll_interval_ms`, stop when `poll_until` condition met or timeout reached, push status template update on each poll result
+- [x] Implement approval UI — when `ValidateActionStep` returns `{:pending_approval, job_id}`, push `pending-approval` status template to canvas, push "Waiting for approval from @{approver}" to chat
+- [x] Implement approver notification — `push_chat` with approval request to approver's active session
+- [x] Implement approval accept/deny LiveView events — `handle_event "approve_action"` and `handle_event "deny_action"` trigger `ApprovalWorker` with decision
+- [x] Wire `from-context` fill: `region` and `org_id` extracted from conversation context entities map without LLM call
+- [x] Wire `infer` fill: `bucket_name`, `access`, `versioning` sent to LLM as typed schema
+- [~] Verify demo sequence: user types "Create a private versioned bucket called acme-prod-assets in us-east-1" → form pre-filled → approval → bucket created → console link shown (manual demo verification — deferred to Slice 15)
+- [x] Write integration test: full demo sequence with mocked LLM and Bridge — assert each status template rendered in correct order
+- [x] Write integration test: `from-context` fields populated without LLM call
+- [x] Write integration test: poll-status loop terminates on `status=ready`
+- [x] Write integration test: approval denial writes denied `AuditLog` entry and notifies requester
 
 ---
 
@@ -456,8 +456,8 @@
 | 8     | Phoenix LiveView Cockpit         | `[x]`  |
 | 9     | Ash Reactor — Reasoning Loop     | `[x]`  |
 | 10    | Lamp 1: EC2 Instance Viewer      | `[x]`  |
-| 11    | Lamp 2: PagerDuty Incidents      | `[ ]`  |
-| 12    | Lamp 3: S3 Bucket Creator        | `[ ]`  |
+| 11    | Lamp 2: PagerDuty Incidents      | `[x]`  |
+| 12    | Lamp 3: S3 Bucket Creator        | `[x]`  |
 | 13    | Lamp 4: GitHub PR Viewer         | `[ ]`  |
 | 14    | Lamp 5: Kubernetes Pod Restarter | `[ ]`  |
 | 15    | Demo Hardening                   | `[ ]`  |

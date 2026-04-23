@@ -9,8 +9,7 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
   """
   use Reactor.Step
 
-  alias Genie.Bridge
-  alias Genie.Lamp.{LampDefinition, LampRegistry, LampRenderer, OptionDef}
+  alias Genie.Lamp.{LampDefinition, LampRegistry, LampRenderer}
   alias Genie.Orchestrator.LlmClient
 
   @impl Reactor.Step
@@ -22,14 +21,7 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
     end
   end
 
-  def run(%{validated_action: {:pending_approval, _job_id, action}, manifests: manifests}, _context, _options) do
-    with {:ok, lamp} <- find_lamp(action.lamp_id, manifests) do
-      html = render_pending_approval(lamp, action)
-      {:ok, %{html: html, lamp_id: action.lamp_id, type: :canvas}}
-    end
-  end
-
-  def run(%{validated_action: {:message, %{text: text}}}, _context, _options) do
+def run(%{validated_action: {:message, %{text: text}}}, _context, _options) do
     {:ok, %{html: nil, message: text, lamp_id: nil, type: :chat}}
   end
 
@@ -82,22 +74,10 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
     {context_fields, infer_fields, none_fields}
   end
 
-  defp fill_from_context(fields, params, lamp) do
+  defp fill_from_context(fields, params, _lamp) do
     Enum.map(fields, fn field ->
       value = Map.get(params, field.id) || Map.get(params, String.to_atom(field.id))
-      field = %{field | value: value}
-
-      if field.options_from do
-        case Bridge.fetch_options(lamp, field) do
-          {:ok, pairs} ->
-            options = Enum.map(pairs, fn {v, l} -> %OptionDef{value: v, label: l} end)
-            %{field | options: options, options_from: nil}
-          _ ->
-            field
-        end
-      else
-        field
-      end
+      %{field | value: value}
     end)
   end
 
@@ -132,12 +112,6 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
 
   defp fill_none_strategy(%LampDefinition{fields: fields} = lamp) do
     %{lamp | fields: Enum.map(fields, fn f -> %{f | value: f.value || f.default} end)}
-  end
-
-  defp render_pending_approval(lamp, _action) do
-    pending_template_result = %{"state" => "pending-approval"}
-    {:safe, html_data} = LampRenderer.render_status(lamp, pending_template_result)
-    IO.iodata_to_binary(html_data)
   end
 
   defp lamp_to_html(lamp) do

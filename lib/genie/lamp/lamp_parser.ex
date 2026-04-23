@@ -571,6 +571,7 @@ defmodule Genie.Lamp.LampParser do
   defp parse_trigger("on-submit"), do: :on_submit
   defp parse_trigger("on-complete"), do: :on_complete
   defp parse_trigger("on-change"), do: :on_change
+  defp parse_trigger("webhook"), do: :webhook
   defp parse_trigger(nil), do: nil
 
   defp parse_depends_behavior("show"), do: :show

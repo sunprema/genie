@@ -68,5 +68,94 @@ defmodule Genie.Workers.ApprovalWorkerTest do
       assert audit_entry.result == :denied
       assert audit_entry.lamp_id == "aws.s3.create-bucket"
     end
+
+    test "notifies the requester session with push_error on denial" do
+      org = create_org!()
+      actor = create_user_in_org!(org)
+      register_global_lamp!()
+
+      session_id = Ecto.UUID.generate()
+
+      {:ok, lamp_action} =
+        Conductor.build_action("aws.s3.create-bucket", "create_bucket", %{},
+          actor: actor,
+          session_id: session_id
+        )
+
+      Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
+      Phoenix.PubSub.subscribe(Genie.PubSub, "chat:#{session_id}")
+
+      assert :ok =
+               ApprovalWorker.perform(%Oban.Job{
+                 args: %{
+                   "action_id" => lamp_action.id,
+                   "approver_id" => actor.id,
+                   "decision" => "deny"
+                 }
+               })
+
+      assert_receive {:push_error, :denied}
+    end
+  end
+
+  describe "perform/1 on pending" do
+    test "does nothing and returns :ok" do
+      assert :ok =
+               ApprovalWorker.perform(%Oban.Job{
+                 args: %{
+                   "action_id" => Ecto.UUID.generate(),
+                   "approver_id" => nil,
+                   "decision" => "pending"
+                 }
+               })
+    end
+  end
+
+  describe "perform/1 on approval — poll loop" do
+    test "executes lamp then polls until status=ready, pushing two canvas updates" do
+      org = create_org!()
+      actor = create_user_in_org!(org)
+      register_global_lamp!()
+
+      session_id = Ecto.UUID.generate()
+
+      {:ok, lamp_action} =
+        Conductor.build_action("aws.s3.create-bucket", "create_bucket",
+          %{"bucket_name" => "test-bucket", "region" => "us-east-1"},
+          actor: actor,
+          session_id: session_id
+        )
+
+      Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
+
+      call_count = :counters.new(1, [])
+
+      Req.Test.stub(Genie.Bridge, fn conn ->
+        :counters.add(call_count, 1, 1)
+
+        Req.Test.json(conn, %{
+          "status" => "ready",
+          "state" => "ready",
+          "bucket_name" => "test-bucket",
+          "console_url" => "https://s3.console.aws.amazon.com/s3/buckets/test-bucket"
+        })
+      end)
+
+      assert :ok =
+               ApprovalWorker.perform(%Oban.Job{
+                 args: %{
+                   "action_id" => lamp_action.id,
+                   "approver_id" => actor.id,
+                   "decision" => "approve"
+                 }
+               })
+
+      # First push_canvas: execution result; second: poll result
+      assert_receive {:push_canvas, _html1}
+      assert_receive {:push_canvas, _html2}
+
+      # At least 2 Bridge calls: create_bucket + poll_status
+      assert :counters.get(call_count, 1) >= 2
+    end
   end
 end

@@ -123,29 +123,6 @@ defmodule Genie.Orchestrator.Steps.FillUiStepTest do
       assert is_binary(html)
     end
 
-    test "renders :pending_approval status template" do
-      register_lamp!()
-      {:ok, [lamp]} = LampRegistry.load_active_manifests(nil)
-
-      action = %Genie.Conductor.LampAction{
-        id: Ecto.UUID.generate(),
-        lamp_id: lamp.id,
-        endpoint_id: "create_bucket",
-        params: %{},
-        session_id: Ecto.UUID.generate()
-      }
-
-      assert {:ok, %{type: :canvas}} =
-               FillUiStep.run(
-                 %{
-                   validated_action: {:pending_approval, 123, action},
-                   manifests: [lamp],
-                   build_context: build_context()
-                 },
-                 %{},
-                 []
-               )
-    end
   end
 
   describe "run/3 — :message" do

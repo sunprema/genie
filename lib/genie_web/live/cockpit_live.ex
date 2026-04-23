@@ -2,7 +2,7 @@ defmodule GenieWeb.CockpitLive do
   use GenieWeb, :live_view
 
   alias Genie.Conversation.Session
-  alias Genie.Workers.{OrchestratorWorker, LampActionWorker}
+  alias Genie.Workers.{OrchestratorWorker, LampActionWorker, ApprovalWorker}
 
   on_mount {GenieWeb.LiveUserAuth, :live_user_required}
 
@@ -22,7 +22,8 @@ defmodule GenieWeb.CockpitLive do
        page_title: "Cockpit",
        session_id: session_id,
        lamp_field_values: %{},
-       lamp_group_states: %{}
+       lamp_group_states: %{},
+       pending_approval: nil
      )
      |> stream(:messages, [])}
   end
@@ -91,6 +92,40 @@ defmodule GenieWeb.CockpitLive do
     {:noreply, assign(socket, lamp_group_states: lamp_group_states)}
   end
 
+  def handle_event("approve_action", _params, socket) do
+    case socket.assigns[:pending_approval] do
+      nil ->
+        {:noreply, socket}
+
+      action_id ->
+        approver_id = socket.assigns[:current_user] && to_string(socket.assigns.current_user.id)
+        %{"action_id" => action_id, "approver_id" => approver_id, "decision" => "approve"}
+        |> ApprovalWorker.new()
+        |> Oban.insert()
+
+        {:noreply, assign(socket, pending_approval: nil)}
+    end
+  end
+
+  def handle_event("deny_action", _params, socket) do
+    case socket.assigns[:pending_approval] do
+      nil ->
+        {:noreply, socket}
+
+      action_id ->
+        approver_id = socket.assigns[:current_user] && to_string(socket.assigns.current_user.id)
+        %{"action_id" => action_id, "approver_id" => approver_id, "decision" => "deny"}
+        |> ApprovalWorker.new()
+        |> Oban.insert()
+
+        {:noreply, assign(socket, pending_approval: nil)}
+    end
+  end
+
+  def handle_info({:pending_approval, action_id}, socket) do
+    {:noreply, assign(socket, pending_approval: action_id)}
+  end
+
   def handle_info({:push_canvas, html}, socket) do
     {:noreply, push_event(socket, "update_canvas", %{html: html})}
   end
@@ -125,6 +160,10 @@ defmodule GenieWeb.CockpitLive do
 
   def push_canvas(session_id, html) do
     Phoenix.PubSub.broadcast(Genie.PubSub, "canvas:#{session_id}", {:push_canvas, html})
+  end
+
+  def push_pending_approval(session_id, action_id) do
+    Phoenix.PubSub.broadcast(Genie.PubSub, "canvas:#{session_id}", {:pending_approval, action_id})
   end
 
   def push_chat(session_id, message) do
