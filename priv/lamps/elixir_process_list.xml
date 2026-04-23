@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lamp
+  id="elixir.process.list"
+  version="1.0"
+  category="monitoring"
+  vendor="elixir">
+
+  <meta>
+    <title>Elixir Process Inspector</title>
+    <description>Browse and inspect all running Elixir processes in the application. Filter by type, view memory usage, message queue length, and per-process detail via Process.info/1.</description>
+    <icon>elixir</icon>
+    <tags>elixir,otp,process,runtime,monitoring,debugging</tags>
+    <requires-approval>false</requires-approval>
+    <destructive>false</destructive>
+    <audit>true</audit>
+    <base-url>http://localhost:4000/genie</base-url>
+    <auth-scheme>bearer</auth-scheme>
+    <timeout-ms>10000</timeout-ms>
+  </meta>
+
+  <endpoints>
+    <endpoint
+      id="list_processes"
+      method="GET"
+      path="/elixir/processes"
+      trigger="on-submit"
+      action-id="submit_list"/>
+    <endpoint
+      id="fetch_process"
+      method="GET"
+      path="/elixir/processes/{pid}"
+      trigger="on-submit"
+      action-id="submit_detail"/>
+  </endpoints>
+
+  <ui>
+    <form
+      aria-label="Elixir Process Inspector"
+      aria-describedby="form-process-description">
+
+      <description id="form-process-description">
+        List and inspect running Elixir processes. Filter by type to narrow results, then click any row to view full Process.info detail.
+      </description>
+
+      <field
+        id="filter"
+        type="select"
+        label="Process Filter"
+        aria-label="Filter running processes by type: all processes, only named registered processes, or only OTP application processes"
+        aria-describedby="hint-filter"
+        genie-fill="infer"
+        required="true"
+        default="all">
+        <option value="all" label="All" description="Every running process in the VM"/>
+        <option value="named" label="Named Only" description="Processes with a registered name"/>
+        <option value="application" label="Application" description="OTP application supervisor trees only"/>
+      </field>
+      <hint id="hint-filter">Use Named Only to find well-known OTP processes; use Application to scope to this app's supervision tree.</hint>
+
+    </form>
+  </ui>
+
+  <actions>
+    <action
+      id="submit_list"
+      label="List Processes"
+      aria-label="Fetch running Elixir processes with the selected filter"
+      style="primary"
+      endpoint-id="list_processes"
+      destructive="false"
+      behavior="submit"/>
+    <action
+      id="submit_detail"
+      label="Inspect Process"
+      aria-label="Fetch full Process.info detail for the selected process"
+      style="secondary"
+      endpoint-id="fetch_process"
+      destructive="false"
+      behavior="submit"/>
+  </actions>
+
+  <status-templates>
+
+    <template state="submitting">
+      <field type="spinner"
+        label="Loading processes..."
+        aria-label="Fetching Elixir processes from the runtime, please wait"
+        style="info"/>
+    </template>
+
+    <template state="ready-list">
+      <field type="table"
+        label="Running Processes"
+        aria-label="List of running Elixir processes filtered by {filter}"
+        value-key="processes"
+        row-click="true"
+        row-id-key="pid"
+        row-click-endpoint="fetch_process">
+        <column key="pid" label="PID"/>
+        <column key="registered_name" label="Name"/>
+        <column key="status" label="Status"/>
+        <column key="memory_kb" label="Memory (KB)"/>
+        <column key="message_queue_len" label="Queue Len"/>
+        <column key="current_function" label="Current Function"/>
+      </field>
+    </template>
+
+    <template state="ready-detail">
+      <field type="detail-panel"
+        label="Process Detail"
+        aria-label="Process.info detail for PID {pid} registered as {registered_name}"
+        value-key="process">
+        <column key="pid" label="PID"/>
+        <column key="registered_name" label="Registered Name"/>
+        <column key="status" label="Status"/>
+        <column key="initial_call" label="Initial Call"/>
+        <column key="current_function" label="Current Function"/>
+        <column key="memory_kb" label="Memory (KB)"/>
+        <column key="heap_size_words" label="Heap Size (words)"/>
+        <column key="stack_size_words" label="Stack Size (words)"/>
+        <column key="message_queue_len" label="Message Queue Length"/>
+        <column key="reductions" label="Reductions"/>
+        <column key="links" label="Linked Processes"/>
+        <column key="monitors" label="Monitors"/>
+      </field>
+    </template>
+
+    <template state="failed">
+      <field type="banner"
+        label="Failed to load processes"
+        aria-label="Elixir process listing failed: {error_message}"
+        style="error"
+        value="{error_message}"/>
+    </template>
+
+  </status-templates>
+
+</lamp>

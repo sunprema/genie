@@ -410,7 +410,9 @@ defmodule Genie.Lamp.LampRenderer do
       type={action_button_type(@action.behavior)}
       class={"h-[34px] px-4 flex items-center gap-1.5 rounded-lg font-sans text-[13px] font-medium cursor-pointer border transition #{action_style_class(@action.style)}"}
       aria-label={@action.aria_label}
+      phx-click={submit_click(@action.behavior)}
       phx-value-lamp-id={@lamp_id}
+      phx-value-endpoint-id={@action.endpoint_id}
       phx-value-destructive={to_string(@action.destructive == true)}>
       <%= @action.label %>
     </button>
@@ -666,9 +668,12 @@ defmodule Genie.Lamp.LampRenderer do
   defp status_text_class("error"), do: "text-red-700"
   defp status_text_class(_), do: "text-slate-600"
 
-  defp action_button_type(:submit), do: "submit"
+  defp action_button_type(:submit), do: "button"
   defp action_button_type(:reset_form), do: "reset"
   defp action_button_type(_), do: "button"
+
+  defp submit_click(:submit), do: "lamp_submit"
+  defp submit_click(_), do: nil
 
   defp action_style_class("primary"), do: "bg-slate-900 text-white border-slate-900 hover:bg-slate-800"
   defp action_style_class("secondary"), do: "bg-white text-slate-900 border-slate-200 hover:border-slate-300"

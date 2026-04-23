@@ -214,9 +214,9 @@ defmodule GenieWeb.CockpitLive do
     actor_id = socket.assigns[:current_user] && socket.assigns.current_user.id
 
     %{
-      lamp_id: params["lamp_id"],
-      endpoint_id: params["endpoint_id"],
-      params: params["params"] || %{},
+      lamp_id: params["lamp-id"],
+      endpoint_id: params["endpoint-id"],
+      params: socket.assigns.lamp_field_values,
       actor_id: actor_id,
       session_id: session_id
     }

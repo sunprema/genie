@@ -112,6 +112,8 @@ defmodule GenieWeb.Router do
       get "/pagerduty/incidents", MockBackendController, :pagerduty_incidents
       get "/github/pulls", MockBackendController, :github_pull_requests
       get "/github/pulls/:id", MockBackendController, :github_pr_detail
+      get "/elixir/processes", MockBackendController, :elixir_processes
+      get "/elixir/processes/:pid", MockBackendController, :elixir_process_detail
     end
   end
 
