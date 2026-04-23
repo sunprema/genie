@@ -259,36 +259,36 @@
 
 ### LLM Client
 
-- [ ] Implement `Genie.Orchestrator.LlmClient.call/1` — POST to LLM provider, parse response into `{:ok, {:tool_call | :intent_call | :message, result}}` or `{:error, reason}`
-- [ ] Implement `Genie.Orchestrator.LlmClient.fill/1` — POST constrained fill prompt, parse JSON response
-- [ ] Configure LLM provider base URL and API key via environment variables
-- [ ] Write unit test: `LlmClient.call/1` with a mock HTTP response correctly parses `tool_call` response
-- [ ] Write unit test: `LlmClient.call/1` with a mock HTTP response correctly parses `intent_call` response
-- [ ] Write unit test: `LlmClient.fill/1` returns a parsed map of field values
+- [x] Implement `Genie.Orchestrator.LlmClient.call/1` — POST to LLM provider, parse response into `{:ok, {:tool_call | :intent_call | :message, result}}` or `{:error, reason}`
+- [x] Implement `Genie.Orchestrator.LlmClient.fill/1` — POST constrained fill prompt, parse JSON response
+- [x] Configure LLM provider base URL and API key via environment variables
+- [x] Write unit test: `LlmClient.call/1` with a mock HTTP response correctly parses `tool_call` response
+- [x] Write unit test: `LlmClient.call/1` with a mock HTTP response correctly parses `intent_call` response
+- [x] Write unit test: `LlmClient.fill/1` returns a parsed map of field values
 
 ### Reactor steps
 
-- [ ] Implement `Steps.ValidateInputStep` — Ash action cast, session load, manifest load, compensate returns auth error
-- [ ] Implement `Steps.BuildContextStep` — system prompt from registry, manifest injection, token budget enforcement, compensate retries with trimmed history
-- [ ] Implement `Steps.LlmCallStep` — `LlmClient.call/1` with exponential backoff compensate (3 retries)
-- [ ] Implement `Steps.ToolExecutionLoopStep` — recursive tool call loop, max 6 iterations guard, compensate injects error into context
-- [ ] Implement `Steps.ValidateActionStep` — `Conductor.build_action/3`, Ash policy check, approval job insertion on `requires_approval: true`
-- [ ] Implement `Steps.FillUiStep` — partition fields by `genie_fill`, `from-context` deterministic fill, `infer` LLM schema fill, render to HTML string, compensate renders with nil infer values
-- [ ] Implement `Steps.PushCockpitStep` — `CockpitLive.push_canvas/2`, `AuditLog` write, undo stores pending UI in session cache
-- [ ] Assemble `Genie.Orchestrator.ReasoningLoop` Ash Reactor with all seven steps in order
+- [x] Implement `Steps.ValidateInputStep` — Ash action cast, session load, manifest load, compensate returns auth error
+- [x] Implement `Steps.BuildContextStep` — system prompt from registry, manifest injection, token budget enforcement, compensate retries with trimmed history
+- [x] Implement `Steps.LlmCallStep` — `LlmClient.call/1` with exponential backoff compensate (3 retries)
+- [x] Implement `Steps.ToolExecutionLoopStep` — recursive tool call loop, max 6 iterations guard, compensate injects error into context
+- [x] Implement `Steps.ValidateActionStep` — `Conductor.build_action/3`, Ash policy check, approval job insertion on `requires_approval: true`
+- [x] Implement `Steps.FillUiStep` — partition fields by `genie_fill`, `from-context` deterministic fill, `infer` LLM schema fill, render to HTML string, compensate renders with nil infer values
+- [x] Implement `Steps.PushCockpitStep` — `CockpitLive.push_canvas/2`, `AuditLog` write, undo stores pending UI in session cache
+- [x] Assemble `Genie.Orchestrator.ReasoningLoop` Ash Reactor with all seven steps in order
 
 ### Wire OrchestratorWorker
 
-- [ ] Replace `OrchestratorWorker` stub with full Reactor invocation: `Genie.Orchestrator.ReasoningLoop.run(%{session_id:, user_message:, actor:})`
+- [x] Replace `OrchestratorWorker` stub with full Reactor invocation: `Genie.Orchestrator.ReasoningLoop.run(%{session_id:, user_message:, actor:})`
 
 ### Tests
 
-- [ ] Write unit test for each Reactor step's `run/3` with mocked dependencies
-- [ ] Write unit test for each Reactor step's `compensate/4` or `undo/4`
-- [ ] Write unit test: `ToolExecutionLoopStep` fires error after 6 iterations
-- [ ] Write unit test: `ValidateActionStep` inserts `ApprovalWorker` job when `requires_approval: true`
-- [ ] Write unit test: `FillUiStep` calls LLM only for `:infer` fields, not `:from_context` fields
-- [ ] Write integration test: full Reactor run with mocked LLM returns rendered HTML to canvas
+- [x] Write unit test for each Reactor step's `run/3` with mocked dependencies
+- [x] Write unit test for each Reactor step's `compensate/4` or `undo/4`
+- [x] Write unit test: `ToolExecutionLoopStep` fires error after 6 iterations
+- [x] Write unit test: `ValidateActionStep` inserts `ApprovalWorker` job when `requires_approval: true`
+- [x] Write unit test: `FillUiStep` calls LLM only for `:infer` fields, not `:from_context` fields
+- [x] Write integration test: full Reactor run with mocked LLM returns rendered HTML to canvas
 
 ---
 
@@ -296,14 +296,14 @@
 
 > First production lamp. Read-only. Proves Bridge HTTP GET, table renderer, dynamic options, on-load trigger.
 
-- [ ] Create `priv/lamps/aws_ec2_list_instances.xml` per XML schema — fields: `region` (`from-context`, `select`, `options-from="load_regions"`), `state` (`infer`, `select`, options: `running|stopped|all`)
-- [ ] Add table renderer to `LampRenderer` — `field type="table"` renders `<table role="grid">` with `<th scope="col">` and `<td>` per row, `aria-label` on each column header
-- [ ] Register `aws.ec2.list-instances` lamp via `mix genie.lamps.load`
-- [ ] Wire `on-load` trigger in `LampActionWorker` — fire `load_regions` endpoint when lamp loads, populate `region` select options via `Bridge.fetch_options/2`
-- [ ] Create mock EC2 API endpoint (or configure a real AWS integration test) returning instance list JSON
-- [ ] Write status templates: `submitting`, `ready` (table of instances), `failed`
-- [ ] Verify: user says "show me running instances in us-east-1", canvas renders EC2 table with region pre-selected
-- [ ] Write integration test: lamp loads, `load_regions` endpoint fires, region options populated, table rendered on submit
+- [x] Create `priv/lamps/aws_ec2_list_instances.xml` per XML schema — fields: `region` (`from-context`, `select`, `options-from="load_regions"`), `state` (`infer`, `select`, options: `running|stopped|all`)
+- [x] Add table renderer to `LampRenderer` — `field type="table"` renders `<table role="grid">` with `<th scope="col">` and `<td>` per row, `aria-label` on each column header
+- [x] Register `aws.ec2.list-instances` lamp via `mix genie.lamps.load`
+- [x] Wire `on-load` trigger in `LampActionWorker` — fire `load_regions` endpoint when lamp loads, populate `region` select options via `Bridge.fetch_options/2`
+- [x] Create mock EC2 API endpoint (or configure a real AWS integration test) returning instance list JSON
+- [x] Write status templates: `submitting`, `ready` (table of instances), `failed`
+- [~] Verify: user says "show me running instances in us-east-1", canvas renders EC2 table with region pre-selected (manual demo verification — deferred to Slice 15 demo hardening)
+- [x] Write integration test: lamp loads, `load_regions` endpoint fires, region options populated, table rendered on submit
 
 ---
 
@@ -454,8 +454,8 @@
 | 6     | Conductor — Action Validation    | `[x]`  |
 | 7     | Oban Workers                     | `[x]`  |
 | 8     | Phoenix LiveView Cockpit         | `[x]`  |
-| 9     | Ash Reactor — Reasoning Loop     | `[ ]`  |
-| 10    | Lamp 1: EC2 Instance Viewer      | `[ ]`  |
+| 9     | Ash Reactor — Reasoning Loop     | `[x]`  |
+| 10    | Lamp 1: EC2 Instance Viewer      | `[x]`  |
 | 11    | Lamp 2: PagerDuty Incidents      | `[ ]`  |
 | 12    | Lamp 3: S3 Bucket Creator        | `[ ]`  |
 | 13    | Lamp 4: GitHub PR Viewer         | `[ ]`  |

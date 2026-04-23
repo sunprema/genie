@@ -3,6 +3,7 @@ defmodule Genie.Lamp.LampParser do
 
   alias Genie.Lamp.{
     ActionDef,
+    ColumnDef,
     EndpointDef,
     FieldDef,
     GroupDef,
@@ -136,7 +137,9 @@ defmodule Genie.Lamp.LampParser do
       depends_on_value: attr(attrs, "depends-on-value"),
       depends_on_behavior: parse_depends_behavior(attr(attrs, "depends-on-behavior")),
       options: [],
+      columns: [],
       value: attr(attrs, "value"),
+      value_key: attr(attrs, "value-key"),
       style: attr(attrs, "style"),
       href: attr(attrs, "href"),
       action_id: attr(attrs, "action-id")
@@ -154,6 +157,12 @@ defmodule Genie.Lamp.LampParser do
 
     field = %{state.current_field | options: [option | state.current_field.options]}
     {:ok, %{state | stack: ["option" | state.stack], current_field: field}}
+  end
+
+  def handle_event(:start_element, {"column", attrs}, state) do
+    col = %ColumnDef{key: attr(attrs, "key"), label: attr(attrs, "label")}
+    field = %{state.current_field | columns: [col | state.current_field.columns]}
+    {:ok, %{state | stack: ["column" | state.stack], current_field: field}}
   end
 
   def handle_event(:start_element, {"hint", attrs}, state) do
@@ -220,7 +229,7 @@ defmodule Genie.Lamp.LampParser do
     field = state.current_field
     rest = tl(state.stack)
     field = if "group" in rest, do: %{field | group_id: state.current_group.id}, else: field
-    field = %{field | options: Enum.reverse(field.options || [])}
+    field = %{field | options: Enum.reverse(field.options || []), columns: Enum.reverse(field.columns || [])}
 
     if "template" in rest do
       {:ok,
@@ -554,6 +563,7 @@ defmodule Genie.Lamp.LampParser do
   defp parse_field_type("banner"), do: :banner
   defp parse_field_type("link"), do: :link
   defp parse_field_type("action"), do: :action
+  defp parse_field_type("table"), do: :table
   defp parse_field_type(nil), do: nil
   defp parse_field_type(other), do: other
 

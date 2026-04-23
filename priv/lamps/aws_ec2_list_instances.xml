@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lamp
+  id="aws.ec2.list-instances"
+  version="1.0"
+  category="compute"
+  vendor="aws">
+
+  <meta>
+    <title>AWS EC2 Instance Viewer</title>
+    <description>View and filter EC2 instances by region and state.</description>
+    <icon>aws-ec2</icon>
+    <tags>aws,compute,ec2,instances</tags>
+    <requires-approval>false</requires-approval>
+    <destructive>false</destructive>
+    <audit>true</audit>
+    <base-url>http://localhost:4000/genie</base-url>
+    <auth-scheme>bearer</auth-scheme>
+    <timeout-ms>15000</timeout-ms>
+  </meta>
+
+  <endpoints>
+    <endpoint
+      id="load_regions"
+      method="GET"
+      path="/aws/regions"
+      trigger="on-load"
+      fills-field="region"/>
+    <endpoint
+      id="list_instances"
+      method="GET"
+      path="/aws/ec2/instances"
+      trigger="on-submit"
+      action-id="submit_list"/>
+  </endpoints>
+
+  <ui>
+    <form
+      aria-label="List EC2 Instances"
+      aria-describedby="form-ec2-description">
+
+      <description id="form-ec2-description">
+        Filter and view EC2 instances by region and state.
+      </description>
+
+      <field
+        id="region"
+        type="select"
+        label="AWS Region"
+        aria-label="AWS region to query for EC2 instances"
+        aria-describedby="hint-ec2-region"
+        genie-fill="from-context"
+        required="true"
+        options-from="load_regions"
+        options-value-key="code"
+        options-label-key="name"/>
+      <hint id="hint-ec2-region">Select the AWS region to query.</hint>
+
+      <field
+        id="state"
+        type="select"
+        label="Instance State"
+        aria-label="Filter EC2 instances by state: running, stopped, or all"
+        genie-fill="infer"
+        required="true"
+        default="running">
+        <option value="running" label="Running" description="Only running instances"/>
+        <option value="stopped" label="Stopped" description="Only stopped instances"/>
+        <option value="all" label="All" description="All instances regardless of state"/>
+      </field>
+
+    </form>
+  </ui>
+
+  <actions>
+    <action
+      id="submit_list"
+      label="List Instances"
+      aria-label="Submit form to list EC2 instances with the selected filters"
+      style="primary"
+      endpoint-id="list_instances"
+      destructive="false"
+      behavior="submit"/>
+  </actions>
+
+  <status-templates>
+    <template state="submitting">
+      <field type="spinner"
+        label="Loading instances..."
+        aria-label="Fetching EC2 instances, please wait"
+        style="info"/>
+    </template>
+
+    <template state="ready">
+      <field type="table"
+        label="EC2 Instances"
+        aria-label="List of EC2 instances in {region}"
+        value-key="instances">
+        <column key="instance_id" label="Instance ID"/>
+        <column key="instance_type" label="Type"/>
+        <column key="state" label="State"/>
+        <column key="availability_zone" label="Availability Zone"/>
+        <column key="public_ip" label="Public IP"/>
+      </field>
+    </template>
+
+    <template state="failed">
+      <field type="banner"
+        label="Failed to list instances"
+        aria-label="EC2 instance listing failed: {error_message}"
+        style="error"
+        value="{error_message}"/>
+    </template>
+  </status-templates>
+
+</lamp>

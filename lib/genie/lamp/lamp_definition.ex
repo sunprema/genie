@@ -35,6 +35,10 @@ defmodule Genie.Lamp.MetaDef do
   ]
 end
 
+defmodule Genie.Lamp.ColumnDef do
+  defstruct [:key, :label]
+end
+
 defmodule Genie.Lamp.FieldDef do
   defstruct [
     :id,
@@ -66,6 +70,8 @@ defmodule Genie.Lamp.FieldDef do
     :style,
     :href,
     :action_id,
+    :value_key,
+    :columns,
     value: nil
   ]
 end

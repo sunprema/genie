@@ -35,3 +35,4 @@ genie-*.tar
 npm-debug.log
 /assets/node_modules/
 
+.env.local.sh

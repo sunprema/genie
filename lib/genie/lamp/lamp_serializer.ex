@@ -1,6 +1,7 @@
 defmodule Genie.Lamp.LampSerializer do
   alias Genie.Lamp.{
     ActionDef,
+    ColumnDef,
     EndpointDef,
     FieldDef,
     GroupDef,
@@ -101,8 +102,14 @@ defmodule Genie.Lamp.LampSerializer do
       style: f.style,
       href: f.href,
       action_id: f.action_id,
-      value: f.value
+      value: f.value,
+      value_key: f.value_key,
+      columns: Enum.map(f.columns || [], &column_to_map/1)
     }
+  end
+
+  defp column_to_map(%ColumnDef{} = c) do
+    %{key: c.key, label: c.label}
   end
 
   defp option_to_map(%OptionDef{} = o) do
@@ -192,8 +199,14 @@ defmodule Genie.Lamp.LampSerializer do
       style: get(m, "style"),
       href: get(m, "href"),
       action_id: get(m, "action_id"),
-      value: get(m, "value")
+      value: get(m, "value"),
+      value_key: get(m, "value_key"),
+      columns: Enum.map(get(m, "columns") || [], &column_from_map/1)
     }
+  end
+
+  defp column_from_map(m) do
+    %ColumnDef{key: get(m, "key"), label: get(m, "label")}
   end
 
   defp option_from_map(m) do

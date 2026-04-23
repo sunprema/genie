@@ -94,6 +94,14 @@ defmodule GenieWeb.Router do
 
       oban_dashboard("/oban")
     end
+
+    # Mock lamp backends — simulates real AWS endpoints locally
+    scope "/genie", GenieWeb do
+      pipe_through :api
+
+      get "/aws/regions", MockBackendController, :regions
+      get "/aws/ec2/instances", MockBackendController, :ec2_instances
+    end
   end
 
   if Application.compile_env(:genie, :dev_routes) do

@@ -476,6 +476,46 @@ defmodule Genie.Lamp.LampRenderer do
     """
   end
 
+  defp render_status_field(%{field: %{type: :table}} = assigns) do
+    rows =
+      case Map.get(assigns.vars, assigns.field.value_key, []) do
+        rows when is_list(rows) -> rows
+        _ -> []
+      end
+
+    assigns = assign(assigns, :rows, rows)
+
+    ~H"""
+    <div aria-label={interpolate(@field.aria_label, @vars)}>
+      <table role="grid" class="w-full border-collapse text-[13px]">
+        <thead>
+          <tr class="border-b border-slate-200">
+            <%= for col <- (@field.columns || []) do %>
+              <th
+                scope="col"
+                class="text-left text-xs text-slate-500 font-medium px-3 py-2"
+                aria-label={col.label}>
+                <%= col.label %>
+              </th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody>
+          <%= for row <- @rows do %>
+            <tr class="border-b border-slate-100 hover:bg-slate-50">
+              <%= for col <- (@field.columns || []) do %>
+                <td class="px-3 py-2 text-slate-700">
+                  <%= Map.get(row, col.key, "") %>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
   defp render_status_field(assigns) do
     ~H"""
     <div aria-label={interpolate(@field.aria_label, @vars)} class="text-[13px] text-slate-700">
