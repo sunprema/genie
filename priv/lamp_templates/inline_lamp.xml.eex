@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lamp
+  id="<%= @lamp_id %>"
+  version="1.0"
+  category="general"
+  vendor="<%= @vendor %>">
+
+  <meta>
+    <title><%= @title %></title>
+    <description><%= @title %> lamp — replace this description with a real one.</description>
+    <icon><%= @vendor %></icon>
+    <tags><%= @vendor %>,<%= @service %></tags>
+    <requires-approval>false</requires-approval>
+    <destructive>false</destructive>
+    <audit>true</audit>
+    <runtime>inline</runtime>
+    <handler><%= @module %></handler>
+    <timeout-ms>10000</timeout-ms>
+  </meta>
+
+  <endpoints>
+    <endpoint
+      id="submit"
+      method="POST"
+      path="/<%= @vendor %>/<%= @service %>/<%= @action %>"
+      trigger="on-submit"
+      action-id="submit_action">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="message" type="string"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
+  </endpoints>
+
+  <ui>
+    <form
+      aria-label="<%= @title %>"
+      aria-describedby="form-description">
+
+      <description id="form-description">
+        Replace this description with a short prompt describing what the user does here.
+      </description>
+
+      <field
+        id="input"
+        type="text"
+        label="Input"
+        aria-label="Example input field — rename and add real fields"
+        genie-fill="infer"
+        required="true"/>
+
+    </form>
+  </ui>
+
+  <actions>
+    <action
+      id="submit_action"
+      label="Submit"
+      aria-label="Submit the form"
+      style="primary"
+      endpoint-id="submit"
+      destructive="false"
+      behavior="submit"/>
+  </actions>
+
+  <status-templates>
+    <template state="submitting">
+      <field type="spinner"
+        label="Working..."
+        aria-label="Working on your request"
+        style="info"/>
+    </template>
+
+    <template state="ready">
+      <field type="banner"
+        label="Done"
+        aria-label="Action completed successfully: {message}"
+        style="success"
+        value="{message}"/>
+    </template>
+
+    <template state="failed">
+      <field type="banner"
+        label="Failed"
+        aria-label="Action failed: {error_message}"
+        style="error"
+        value="{error_message}"/>
+    </template>
+  </status-templates>
+
+</lamp>

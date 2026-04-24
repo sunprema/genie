@@ -8,6 +8,31 @@ defmodule Genie.Workers.LampActionWorkerTest do
   @valid_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_s3_create_bucket.xml"]))
   @ec2_xml File.read!(Path.join([:code.priv_dir(:genie), "lamps", "aws_ec2_list_instances.xml"]))
 
+  # Stub handler that always returns {:error, :simulated_backend_failure}.
+  # Used to exercise the Bridge's error path for inline lamps without touching
+  # HTTP. Registered via config :genie, :lamp_handler_overrides.
+  defmodule AlwaysErrorHandler do
+    def handle_endpoint(_endpoint_id, _params, _ctx),
+      do: {:error, :simulated_backend_failure}
+
+    def handle_options(_endpoint_id, _ctx),
+      do: {:error, :simulated_backend_failure}
+  end
+
+  defp with_handler_override(real_handler, stub_module) do
+    previous = Application.get_env(:genie, :lamp_handler_overrides, %{})
+
+    Application.put_env(
+      :genie,
+      :lamp_handler_overrides,
+      Map.put(previous, real_handler, inspect(stub_module))
+    )
+
+    ExUnit.Callbacks.on_exit(fn ->
+      Application.put_env(:genie, :lamp_handler_overrides, previous)
+    end)
+  end
+
   defp create_org! do
     n = System.unique_integer([:positive])
 
@@ -103,13 +128,6 @@ defmodule Genie.Workers.LampActionWorkerTest do
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Req.Test.json(conn, [
-          %{"code" => "us-east-1", "name" => "US East (N. Virginia)"},
-          %{"code" => "us-west-2", "name" => "US West (Oregon)"}
-        ])
-      end)
-
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
                  args: %{
@@ -126,16 +144,14 @@ defmodule Genie.Workers.LampActionWorkerTest do
       assert html =~ "us-west-2"
     end
 
-    test "on-load Bridge error broadcasts push_error" do
+    test "on-load handler error broadcasts push_error" do
       register_global_lamp!(@ec2_xml)
       session_id = Ecto.UUID.generate()
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
       Phoenix.PubSub.subscribe(Genie.PubSub, "chat:#{session_id}")
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Plug.Conn.send_resp(conn, 503, "Service Unavailable")
-      end)
+      with_handler_override("Genie.Lamps.AWS.EC2ListInstances", AlwaysErrorHandler)
 
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
@@ -151,8 +167,8 @@ defmodule Genie.Workers.LampActionWorkerTest do
     end
   end
 
-  describe "perform/1 — EC2 submit Bridge error" do
-    test "broadcasts push_error when Bridge returns 500" do
+  describe "perform/1 — EC2 submit handler error" do
+    test "broadcasts push_error when handler returns an error tuple" do
       org = create_org!()
       actor = create_user_in_org!(org)
       register_global_lamp!(@ec2_xml)
@@ -160,9 +176,7 @@ defmodule Genie.Workers.LampActionWorkerTest do
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Plug.Conn.send_resp(conn, 500, "Internal Server Error")
-      end)
+      with_handler_override("Genie.Lamps.AWS.EC2ListInstances", AlwaysErrorHandler)
 
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
@@ -203,14 +217,6 @@ defmodule Genie.Workers.LampActionWorkerTest do
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Req.Test.json(conn, %{
-          "state" => "ready",
-          "region" => "us-east-1",
-          "instances" => []
-        })
-      end)
-
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
                  args: %{
@@ -231,14 +237,6 @@ defmodule Genie.Workers.LampActionWorkerTest do
       pagerduty_xml = File.read!(Path.join([:code.priv_dir(:genie), "lamps", "pagerduty_incidents.xml"]))
       register_global_lamp!(pagerduty_xml)
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Req.Test.json(conn, %{
-          "incidents" => [
-            %{"id" => "P001", "title" => "DB down", "status" => "triggered", "urgency" => "high"}
-          ]
-        })
-      end)
-
       result =
         LampActionWorker.perform(%Oban.Job{
           args: %{
@@ -251,21 +249,18 @@ defmodule Genie.Workers.LampActionWorkerTest do
       assert result == :ok
     end
 
-    test "webhook with Bridge error returns error tuple" do
-      org = create_org!()
+    test "webhook with handler error returns error tuple" do
       pagerduty_xml = File.read!(Path.join([:code.priv_dir(:genie), "lamps", "pagerduty_incidents.xml"]))
       register_global_lamp!(pagerduty_xml)
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Plug.Conn.send_resp(conn, 500, "error")
-      end)
+      with_handler_override("Genie.Lamps.PagerDuty.Incidents", AlwaysErrorHandler)
 
       result =
         LampActionWorker.perform(%Oban.Job{
           args: %{
             "trigger" => "webhook",
             "lamp_id" => "pagerduty.incidents.list",
-            "org_id" => org.id
+            "org_id" => nil
           }
         })
 
@@ -299,29 +294,6 @@ defmodule Genie.Workers.LampActionWorkerTest do
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
 
-      # Create stub that returns submitting first, then ready on poll
-      agent = start_supervised!({Agent, fn -> 0 end})
-
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
-
-        if count == 0 do
-          Req.Test.json(conn, %{
-            "state" => "submitting",
-            "bucket_name" => "test-bucket",
-            "region" => "us-east-1"
-          })
-        else
-          Req.Test.json(conn, %{
-            "status" => "ready",
-            "state" => "ready",
-            "bucket_name" => "test-bucket",
-            "region" => "us-east-1",
-            "console_url" => "https://console.aws.amazon.com/s3"
-          })
-        end
-      end)
-
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
                  args: %{
@@ -350,22 +322,6 @@ defmodule Genie.Workers.LampActionWorkerTest do
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Req.Test.json(conn, %{
-          "state" => "ready",
-          "region" => "us-east-1",
-          "instances" => [
-            %{
-              "instance_id" => "i-0abc1234",
-              "instance_type" => "t3.micro",
-              "state" => "running",
-              "availability_zone" => "us-east-1a",
-              "public_ip" => "54.123.45.67"
-            }
-          ]
-        })
-      end)
-
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
                  args: %{
@@ -378,7 +334,7 @@ defmodule Genie.Workers.LampActionWorkerTest do
                })
 
       assert_receive {:push_canvas, html}
-      assert html =~ "i-0abc1234"
+      assert html =~ "i-0a1b2c3d4e5f6a7b8"
       assert html =~ "t3.micro"
       assert html =~ "us-east-1a"
     end

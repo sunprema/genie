@@ -13,8 +13,8 @@
     <requires-approval>false</requires-approval>
     <destructive>false</destructive>
     <audit>true</audit>
-    <base-url>http://localhost:4000/genie</base-url>
-    <auth-scheme>bearer</auth-scheme>
+    <runtime>inline</runtime>
+    <handler>Genie.Lamps.GitHub.PullRequests</handler>
     <timeout-ms>15000</timeout-ms>
   </meta>
 

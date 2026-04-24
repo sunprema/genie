@@ -34,8 +34,8 @@ defmodule Genie.Lamp.LampParserTest do
       assert meta.requires_approval == true
       assert meta.destructive == false
       assert meta.audit == true
-      assert meta.base_url == "https://api.partner.com/genie"
-      assert meta.auth_scheme == "bearer"
+      assert meta.runtime == "inline"
+      assert meta.handler == "Genie.Lamps.AWS.S3CreateBucket"
       assert meta.timeout_ms == 10_000
     end
 

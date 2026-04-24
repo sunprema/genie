@@ -744,12 +744,18 @@ defmodule Genie.Lamp.LampParser do
 
   defp attr(attrs, name), do: Enum.find_value(attrs, fn {k, v} -> if k == name, do: v end)
 
+  defp meta_key("title"), do: :title
+  defp meta_key("icon"), do: :icon
+  defp meta_key("tags"), do: :tags
+  defp meta_key("destructive"), do: :destructive
+  defp meta_key("audit"), do: :audit
+  defp meta_key("runtime"), do: :runtime
+  defp meta_key("handler"), do: :handler
   defp meta_key("requires-approval"), do: :requires_approval
   defp meta_key("approval-policy"), do: :approval_policy
   defp meta_key("base-url"), do: :base_url
   defp meta_key("auth-scheme"), do: :auth_scheme
   defp meta_key("timeout-ms"), do: :timeout_ms
-  defp meta_key(name), do: String.to_existing_atom(name)
 
   defp parse_bool("true"), do: true
   defp parse_bool("false"), do: false

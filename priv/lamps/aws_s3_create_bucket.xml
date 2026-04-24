@@ -14,8 +14,8 @@
     <approval-policy>default</approval-policy>
     <destructive>false</destructive>
     <audit>true</audit>
-    <base-url>https://api.partner.com/genie</base-url>
-    <auth-scheme>bearer</auth-scheme>
+    <runtime>inline</runtime>
+    <handler>Genie.Lamps.AWS.S3CreateBucket</handler>
     <timeout-ms>10000</timeout-ms>
   </meta>
 

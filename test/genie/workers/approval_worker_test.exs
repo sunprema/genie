@@ -111,6 +111,36 @@ defmodule Genie.Workers.ApprovalWorkerTest do
     end
   end
 
+  # Counting stub handler for the S3 lamp — lets the poll-loop test verify that
+  # create_bucket and poll_status are both called, without touching HTTP.
+  defmodule CountingS3Handler do
+    def handle_endpoint(endpoint_id, _params, _ctx) do
+      :counters.add(counter(), 1, 1)
+
+      case endpoint_id do
+        "create_bucket" ->
+          {:ok,
+           %{
+             "state" => "submitting",
+             "bucket_name" => "test-bucket",
+             "console_url" => "https://s3.console.aws.amazon.com/s3/buckets/test-bucket"
+           }}
+
+        "poll_status" ->
+          {:ok,
+           %{
+             "status" => "ready",
+             "state" => "ready",
+             "bucket_name" => "test-bucket",
+             "console_url" => "https://s3.console.aws.amazon.com/s3/buckets/test-bucket"
+           }}
+      end
+    end
+
+    def install_counter(ref), do: :persistent_term.put(__MODULE__, ref)
+    defp counter, do: :persistent_term.get(__MODULE__)
+  end
+
   describe "perform/1 on approval — poll loop" do
     test "executes lamp then polls until status=ready, pushing two canvas updates" do
       org = create_org!()
@@ -129,17 +159,17 @@ defmodule Genie.Workers.ApprovalWorkerTest do
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
 
       call_count = :counters.new(1, [])
+      CountingS3Handler.install_counter(call_count)
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        :counters.add(call_count, 1, 1)
+      previous = Application.get_env(:genie, :lamp_handler_overrides, %{})
 
-        Req.Test.json(conn, %{
-          "status" => "ready",
-          "state" => "ready",
-          "bucket_name" => "test-bucket",
-          "console_url" => "https://s3.console.aws.amazon.com/s3/buckets/test-bucket"
-        })
-      end)
+      Application.put_env(
+        :genie,
+        :lamp_handler_overrides,
+        Map.put(previous, "Genie.Lamps.AWS.S3CreateBucket", inspect(CountingS3Handler))
+      )
+
+      on_exit(fn -> Application.put_env(:genie, :lamp_handler_overrides, previous) end)
 
       assert :ok =
                ApprovalWorker.perform(%Oban.Job{
@@ -154,7 +184,7 @@ defmodule Genie.Workers.ApprovalWorkerTest do
       assert_receive {:push_canvas, _html1}
       assert_receive {:push_canvas, _html2}
 
-      # At least 2 Bridge calls: create_bucket + poll_status
+      # At least 2 handler calls: create_bucket + poll_status
       assert :counters.get(call_count, 1) >= 2
     end
   end

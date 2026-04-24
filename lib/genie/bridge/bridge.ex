@@ -135,6 +135,7 @@ defmodule Genie.Bridge do
   defp resolve_handler(""), do: {:error, :handler_not_declared}
 
   defp resolve_handler(name) when is_binary(name) do
+    name = apply_handler_override(name)
     module = Module.concat([name])
 
     if Code.ensure_loaded?(module) and function_exported?(module, :handle_endpoint, 3) do
@@ -142,6 +143,15 @@ defmodule Genie.Bridge do
     else
       {:error, {:handler_not_found, name}}
     end
+  end
+
+  # Tests and dev can swap a lamp's handler module via
+  # `config :genie, :lamp_handler_overrides, %{"Genie.Lamps.Real" => "MyTest.Stub"}`.
+  # Key is the XML-declared handler string; value is the replacement module string.
+  defp apply_handler_override(name) do
+    :genie
+    |> Application.get_env(:lamp_handler_overrides, %{})
+    |> Map.get(name, name)
   end
 
   defp build_context(lamp, endpoint, req, started_at) do

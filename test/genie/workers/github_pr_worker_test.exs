@@ -47,17 +47,6 @@ defmodule Genie.Workers.GithubPrWorkerTest do
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
 
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Req.Test.json(conn, %{
-          "state" => "ready-list",
-          "repo" => "acme/platform",
-          "pull_requests" => [
-            %{"number" => "42", "title" => "Add rate limiting", "author" => "alice", "state" => "open", "updated_at" => "2 hours ago"},
-            %{"number" => "38", "title" => "Fix memory leak", "author" => "bob", "state" => "open", "updated_at" => "1 day ago"}
-          ]
-        })
-      end)
-
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
                  args: %{
@@ -70,8 +59,8 @@ defmodule Genie.Workers.GithubPrWorkerTest do
                })
 
       assert_receive {:push_canvas, html}
-      assert html =~ "Add rate limiting"
-      assert html =~ "Fix memory leak"
+      assert html =~ "Add rate limiting to API gateway"
+      assert html =~ "Fix memory leak in worker pool"
       assert html =~ "alice"
       # Row-click attributes present
       assert html =~ "lamp_row_select"
@@ -85,23 +74,6 @@ defmodule Genie.Workers.GithubPrWorkerTest do
       session_id = Ecto.UUID.generate()
 
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
-
-      Req.Test.stub(Genie.Bridge, fn conn ->
-        Req.Test.json(conn, %{
-          "state" => "ready-detail",
-          "pull_request" => %{
-            "number" => "42",
-            "title" => "Add rate limiting to API gateway",
-            "author" => "alice",
-            "state" => "open",
-            "base" => "main",
-            "head" => "feature/rate-limiting",
-            "body" => "Implements token-bucket rate limiting.",
-            "url" => "https://github.com/acme/platform/pull/42",
-            "updated_at" => "2 hours ago"
-          }
-        })
-      end)
 
       assert :ok =
                LampActionWorker.perform(%Oban.Job{
@@ -118,7 +90,8 @@ defmodule Genie.Workers.GithubPrWorkerTest do
       assert html =~ "Add rate limiting to API gateway"
       assert html =~ "alice"
       assert html =~ "feature/rate-limiting"
-      assert html =~ "Implements token-bucket rate limiting."
+      assert html =~ "token-bucket rate limiting"
+      assert html =~ "/pull/42"
     end
   end
 end

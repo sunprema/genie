@@ -46,7 +46,7 @@ defmodule Genie.Lamp.Handler do
 
     quote do
       @behaviour Genie.Lamp.Handler
-      Module.register_attribute(__MODULE__, :endpoint, accumulate: true)
+      Module.register_attribute(__MODULE__, :endpoint, accumulate: true, persist: true)
       @genie_lamp_id unquote(lamp_id)
       @before_compile Genie.Lamp.Handler.Compiler
 
