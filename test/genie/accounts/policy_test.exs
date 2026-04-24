@@ -43,6 +43,12 @@ defmodule Genie.Accounts.PolicyTest do
   # --- Organisation policies ---
 
   describe "Organisation read policy" do
+    test "nil actor reads no organisations" do
+      _org = create_org!()
+      {:ok, orgs} = Ash.read(Organisation, actor: nil)
+      assert orgs == []
+    end
+
     test "user can read their own organisation" do
       org = create_org!()
       user = create_user_in_org!(org)
@@ -63,9 +69,56 @@ defmodule Genie.Accounts.PolicyTest do
     end
   end
 
+  # --- User update policies (IsSelf check) ---
+
+  describe "User update policy" do
+    test "nil actor cannot update any user record" do
+      org = create_org!()
+      user = create_user_in_org!(org)
+
+      result =
+        user
+        |> Ash.Changeset.for_update(:update, %{})
+        |> Ash.update(authorize?: true, actor: nil)
+
+      assert {:error, _} = result
+    end
+
+    test "user can update their own record" do
+      org = create_org!()
+      user = create_user_in_org!(org)
+
+      result =
+        user
+        |> Ash.Changeset.for_update(:update, %{})
+        |> Ash.update(authorize?: true, actor: user)
+
+      assert {:ok, _updated} = result
+    end
+
+    test "user cannot update another user's record" do
+      org = create_org!()
+      user_a = create_user_in_org!(org)
+      user_b = create_user_in_org!(org)
+
+      result =
+        user_b
+        |> Ash.Changeset.for_update(:update, %{})
+        |> Ash.update(authorize?: true, actor: user_a)
+
+      assert {:error, %Ash.Error.Forbidden{}} = result
+    end
+  end
+
   # --- User policies ---
 
   describe "User read policy" do
+    test "nil actor reads no users" do
+      create_user_in_org!(create_org!())
+      {:ok, users} = Ash.read(User, actor: nil)
+      assert users == []
+    end
+
     test "user can read other users in their own organisation" do
       org = create_org!()
       user_a = create_user_in_org!(org)

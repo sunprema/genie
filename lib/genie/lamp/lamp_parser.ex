@@ -385,8 +385,13 @@ defmodule Genie.Lamp.LampParser do
          :ok <- validate_options_from_refs(defn),
          :ok <- validate_depends_on_refs(defn),
          :ok <- validate_aria_labels(defn),
-         :ok <- validate_genie_fill_values(defn) do
-      validate_primary_action(defn)
+         :ok <- validate_genie_fill_values(defn),
+         :ok <- validate_path_param_refs(defn),
+         :ok <- validate_state_names(defn),
+         :ok <- validate_option_key_pair(defn),
+         :ok <- validate_primary_action(defn) do
+      warn_template_placeholders(defn)
+      :ok
     end
   end
 
@@ -504,6 +509,157 @@ defmodule Genie.Lamp.LampParser do
     else
       :ok
     end
+  end
+
+  # Row-click endpoints receive a synthetic `id` param from the cockpit
+  # (see GenieWeb.CockpitLive handle_event("lamp_row_select", ...)).
+  @row_click_param "id"
+
+  defp validate_path_param_refs(%{
+         endpoints: endpoints,
+         fields: fields,
+         status_templates: templates
+       }) do
+    field_ids = MapSet.new(fields, & &1.id)
+
+    row_click_endpoint_ids =
+      templates
+      |> Enum.flat_map(fn t -> t.fields || [] end)
+      |> Enum.concat(fields)
+      |> Enum.flat_map(fn f -> List.wrap(f.row_click_endpoint) end)
+      |> MapSet.new()
+
+    Enum.reduce_while(endpoints, :ok, fn endpoint, :ok ->
+      allowed =
+        if endpoint.id in row_click_endpoint_ids do
+          MapSet.put(field_ids, @row_click_param)
+        else
+          field_ids
+        end
+
+      case Enum.find(path_params(endpoint.path), &(&1 not in allowed)) do
+        nil ->
+          {:cont, :ok}
+
+        bad ->
+          hint =
+            if endpoint.id in row_click_endpoint_ids do
+              " (row-click endpoints receive only \"id\")"
+            else
+              ""
+            end
+
+          {:halt,
+           {:error,
+            "endpoint #{endpoint.id} path \"#{endpoint.path}\" references unknown param {#{bad}}#{hint}"}}
+      end
+    end)
+  end
+
+  defp validate_state_names(%{status_templates: []}), do: :ok
+
+  defp validate_state_names(%{status_templates: templates}) do
+    with :ok <- check_state_slugs(templates) do
+      check_positive_state(templates)
+    end
+  end
+
+  defp check_state_slugs(templates) do
+    Enum.reduce_while(templates, :ok, fn tmpl, :ok ->
+      cond do
+        tmpl.state in [nil, ""] ->
+          {:halt, {:error, "status-template is missing required state attribute"}}
+
+        Regex.match?(~r/^[a-z0-9][a-z0-9_\-]*$/, tmpl.state) ->
+          {:cont, :ok}
+
+        true ->
+          {:halt,
+           {:error,
+            "status-template state must be slug-safe (lowercase alphanumerics, _ or -), got: #{inspect(tmpl.state)}"}}
+      end
+    end)
+  end
+
+  defp check_positive_state(templates) do
+    if Enum.any?(templates, &positive_state?(&1.state)) do
+      :ok
+    else
+      {:error,
+       "lamp must define at least one positive status-template state (ready, success, ready-*, or no_*)"}
+    end
+  end
+
+  defp positive_state?(state) when is_binary(state) do
+    state == "ready" or state == "success" or
+      String.starts_with?(state, "ready-") or
+      String.starts_with?(state, "success-") or
+      String.starts_with?(state, "no_")
+  end
+
+  defp positive_state?(_), do: false
+
+  defp validate_option_key_pair(%{fields: fields}) do
+    Enum.reduce_while(fields, :ok, fn field, :ok ->
+      case {field.options_value_key, field.options_label_key} do
+        {nil, nil} ->
+          {:cont, :ok}
+
+        {v, l} when is_binary(v) and is_binary(l) ->
+          {:cont, :ok}
+
+        {v, nil} when is_binary(v) ->
+          {:halt,
+           {:error,
+            "field #{field.id} has options-value-key but is missing options-label-key"}}
+
+        {nil, l} when is_binary(l) ->
+          {:halt,
+           {:error,
+            "field #{field.id} has options-label-key but is missing options-value-key"}}
+      end
+    end)
+  end
+
+  # Warn-mode check for status-template placeholders. Phase 1 cannot verify
+  # response keys (no <response-schema> yet), so we only surface likely typos
+  # against form field ids plus a small conventional allowlist. Phase 2 graduates
+  # this to a hard error once endpoints declare response_keys.
+  @conventional_template_keys ~w(state error error_message count)
+
+  defp warn_template_placeholders(%{
+         id: lamp_id,
+         fields: fields,
+         status_templates: templates
+       }) do
+    field_ids = MapSet.new(fields, & &1.id)
+    allowed = MapSet.union(field_ids, MapSet.new(@conventional_template_keys))
+
+    for tmpl <- templates,
+        tf <- tmpl.fields,
+        text <- template_field_texts(tf),
+        placeholder <- path_params(text),
+        placeholder not in allowed do
+      require Logger
+
+      Logger.warning(
+        "[lamp #{lamp_id}] status-template \"#{tmpl.state}\" references placeholder {#{placeholder}} " <>
+          "that is not a form field or conventional key. Declare a <response-schema> in Phase 2 to validate response keys."
+      )
+    end
+
+    :ok
+  end
+
+  defp template_field_texts(field) do
+    [field.aria_label, field.label, field.value, field.href]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp path_params(nil), do: []
+
+  defp path_params(path) when is_binary(path) do
+    Regex.scan(~r/\{([^}]+)\}/, path, capture: :all_but_first) |> List.flatten()
   end
 
   # --- Helpers ---

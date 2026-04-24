@@ -376,6 +376,132 @@ defmodule Genie.Lamp.LampParserTest do
     end
   end
 
+  describe "validation — path param refs" do
+    test "path param referencing a form field id passes" do
+      xml = lamp_xml_with_custom_endpoint(~s(path="/items/{item_id}"))
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+
+    test "path param referencing an undefined field returns error" do
+      xml = lamp_xml_with_custom_endpoint(~s(path="/items/{missing}"))
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "unknown param"
+      assert msg =~ "{missing}"
+    end
+
+    test "row-click endpoint may use synthetic {id} param" do
+      xml = lamp_xml_with_row_click_endpoint()
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+
+    test "non-row-click endpoint cannot use {id} unless it is a form field" do
+      xml = lamp_xml_with_custom_endpoint(~s(path="/items/{id}"))
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "unknown param"
+      assert msg =~ "{id}"
+    end
+  end
+
+  describe "validation — state names" do
+    test "empty state attribute returns error" do
+      xml = lamp_xml_with_template_state("")
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "state"
+    end
+
+    test "state with spaces returns error" do
+      xml = lamp_xml_with_template_state("not safe")
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "slug-safe"
+    end
+
+    test "state with uppercase returns error" do
+      xml = lamp_xml_with_template_state("Ready")
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "slug-safe"
+    end
+
+    test "lamp with only a failed template returns error (no positive state)" do
+      xml = lamp_xml_with_template_state("failed")
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "positive"
+    end
+
+    test "ready-list counts as positive" do
+      xml = lamp_xml_with_template_state("ready-list")
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+
+    test "no_incidents counts as positive" do
+      xml = lamp_xml_with_template_state("no_incidents")
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+  end
+
+  describe "validation — options key pair" do
+    test "options-value-key without options-label-key returns error" do
+      xml = lamp_xml_with_options_keys(~s(options-value-key="code"))
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "options-label-key"
+    end
+
+    test "options-label-key without options-value-key returns error" do
+      xml = lamp_xml_with_options_keys(~s(options-label-key="name"))
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "options-value-key"
+    end
+
+    test "both keys set passes" do
+      xml =
+        lamp_xml_with_options_keys(~s(options-value-key="code" options-label-key="name"))
+
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+
+    test "neither key set passes" do
+      xml = lamp_xml_with_options_keys("")
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+  end
+
+  describe "warn-mode template placeholders" do
+    import ExUnit.CaptureLog
+
+    test "unknown placeholder logs a warning but parse succeeds" do
+      xml = lamp_xml_with_template_value("Hello {mystery_key}!")
+
+      log =
+        capture_log(fn ->
+          assert {:ok, _} = LampParser.parse(xml)
+        end)
+
+      assert log =~ "mystery_key"
+      assert log =~ "response-schema"
+    end
+
+    test "form field placeholder does not warn" do
+      xml = lamp_xml_with_template_value("Value is {test_field}")
+
+      log =
+        capture_log(fn ->
+          assert {:ok, _} = LampParser.parse(xml)
+        end)
+
+      refute log =~ "test_field"
+    end
+
+    test "conventional keys do not warn" do
+      xml = lamp_xml_with_template_value("{error_message}")
+
+      log =
+        capture_log(fn ->
+          assert {:ok, _} = LampParser.parse(xml)
+        end)
+
+      refute log =~ "error_message"
+    end
+  end
+
   # --- XML fixture builders ---
 
   defp lamp_xml(fields_xml) when is_binary(fields_xml) do
@@ -527,6 +653,110 @@ defmodule Genie.Lamp.LampParserTest do
         <field id="f" type="text" aria-label="A required field" genie-fill="none" required="true"/>
       </form></ui>
       <actions><action id="s" label="S" aria-label="Submit" style="secondary" endpoint-id="run" behavior="submit"/></actions>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_with_custom_endpoint(endpoint_attrs) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.custom" version="1.0" category="compute" vendor="test">
+      <meta><title>T</title><base-url>https://x.com</base-url><auth-scheme>bearer</auth-scheme><requires-approval>false</requires-approval><destructive>false</destructive><audit>false</audit></meta>
+      <endpoints>
+        <endpoint id="run" method="GET" #{endpoint_attrs} trigger="on-submit" action-id="s"/>
+      </endpoints>
+      <ui><form aria-label="F">
+        <field id="item_id" type="text" aria-label="Item id" genie-fill="none"/>
+      </form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="run" behavior="submit"/></actions>
+      <status-templates>
+        <template state="ready">
+          <field type="banner" label="Done" aria-label="Done loading" style="success" value="OK"/>
+        </template>
+      </status-templates>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_with_row_click_endpoint do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.rowclick" version="1.0" category="compute" vendor="test">
+      <meta><title>T</title><base-url>https://x.com</base-url><auth-scheme>bearer</auth-scheme><requires-approval>false</requires-approval><destructive>false</destructive><audit>false</audit></meta>
+      <endpoints>
+        <endpoint id="list_items" method="GET" path="/items" trigger="on-submit" action-id="s"/>
+        <endpoint id="fetch_item" method="GET" path="/items/{id}" trigger="on-submit"/>
+      </endpoints>
+      <ui><form aria-label="F">
+        <field id="query" type="text" aria-label="Search query" genie-fill="none"/>
+      </form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="list_items" behavior="submit"/></actions>
+      <status-templates>
+        <template state="ready">
+          <field type="table" aria-label="Items" value-key="items"
+            row-click="true" row-id-key="item_id" row-click-endpoint="fetch_item">
+            <column key="item_id" label="Id"/>
+          </field>
+        </template>
+      </status-templates>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_with_template_state(state) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.state" version="1.0" category="compute" vendor="test">
+      <meta><title>T</title><base-url>https://x.com</base-url><auth-scheme>bearer</auth-scheme><requires-approval>false</requires-approval><destructive>false</destructive><audit>false</audit></meta>
+      <endpoints><endpoint id="run" method="POST" path="/run" trigger="on-submit" action-id="s"/></endpoints>
+      <ui><form aria-label="F"><field id="f" type="text" aria-label="A field" genie-fill="none"/></form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="run" behavior="submit"/></actions>
+      <status-templates>
+        <template state="#{state}">
+          <field type="banner" label="X" aria-label="X banner" style="info" value="X"/>
+        </template>
+      </status-templates>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_with_options_keys(keys_attrs) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.optkeys" version="1.0" category="compute" vendor="test">
+      <meta><title>T</title><base-url>https://x.com</base-url><auth-scheme>bearer</auth-scheme><requires-approval>false</requires-approval><destructive>false</destructive><audit>false</audit></meta>
+      <endpoints>
+        <endpoint id="load_opts" method="GET" path="/opts" trigger="on-load" fills-field="sel"/>
+        <endpoint id="run" method="POST" path="/run" trigger="on-submit" action-id="s"/>
+      </endpoints>
+      <ui><form aria-label="F">
+        <field id="sel" type="select" aria-label="Pick one" genie-fill="none" options-from="load_opts" #{keys_attrs}/>
+      </form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="run" behavior="submit"/></actions>
+      <status-templates>
+        <template state="ready">
+          <field type="banner" label="Done" aria-label="Done loading" style="success" value="OK"/>
+        </template>
+      </status-templates>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_with_template_value(value) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.tplval" version="1.0" category="compute" vendor="test">
+      <meta><title>T</title><base-url>https://x.com</base-url><auth-scheme>bearer</auth-scheme><requires-approval>false</requires-approval><destructive>false</destructive><audit>false</audit></meta>
+      <endpoints><endpoint id="run" method="POST" path="/run" trigger="on-submit" action-id="s"/></endpoints>
+      <ui><form aria-label="F">
+        <field id="test_field" type="text" aria-label="A field" genie-fill="none"/>
+      </form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="run" behavior="submit"/></actions>
+      <status-templates>
+        <template state="ready">
+          <field type="banner" label="X" aria-label="X banner" style="info" value="#{value}"/>
+        </template>
+      </status-templates>
     </lamp>
     """
   end

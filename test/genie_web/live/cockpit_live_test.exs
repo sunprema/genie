@@ -96,9 +96,9 @@ defmodule GenieWeb.CockpitLiveTest do
       {:ok, view, _html} = live(conn, "/cockpit")
 
       render_hook(view, "lamp_submit", %{
-        "lamp_id" => "aws.s3.create-bucket",
-        "endpoint_id" => "create_bucket",
-        "params" => %{"bucket_name" => "test-bucket"}
+        "lamp-id" => "aws.s3.create-bucket",
+        "endpoint-id" => "create_bucket",
+        "destructive" => "false"
       })
 
       assert_enqueued(worker: LampActionWorker, args: %{"lamp_id" => "aws.s3.create-bucket"})
@@ -128,6 +128,170 @@ defmodule GenieWeb.CockpitLiveTest do
       assert html =~ "Something went wrong"
 
       assert_push_event(view, "canvas_error", %{reason: "Something went wrong"})
+    end
+  end
+
+  describe "lamp_field_change event" do
+    test "updates lamp_field_values in assigns", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_field_change", %{
+        "bucket_name" => "my-bucket",
+        "region" => "us-east-1"
+      })
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.lamp_field_values["bucket_name"] == "my-bucket"
+      assert assigns.lamp_field_values["region"] == "us-east-1"
+    end
+
+    test "merges with existing field values", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_field_change", %{"bucket_name" => "first"})
+      render_hook(view, "lamp_field_change", %{"region" => "us-west-2"})
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.lamp_field_values["bucket_name"] == "first"
+      assert assigns.lamp_field_values["region"] == "us-west-2"
+    end
+  end
+
+  describe "lamp_toggle event" do
+    test "updates field value in lamp_field_values", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_toggle", %{"field" => "versioning", "value" => "true"})
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.lamp_field_values["versioning"] == "true"
+    end
+  end
+
+  describe "lamp_group_toggle event" do
+    test "toggles group state", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_group_toggle", %{"group" => "advanced_config"})
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.lamp_group_states["advanced_config"] == true
+
+      render_hook(view, "lamp_group_toggle", %{"group" => "advanced_config"})
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.lamp_group_states["advanced_config"] == false
+    end
+  end
+
+  describe "lamp_submit destructive path" do
+    test "destructive submit stores params and pushes lamp_confirm_needed event", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_submit", %{
+        "lamp-id" => "aws.s3.create-bucket",
+        "endpoint-id" => "delete_bucket",
+        "destructive" => "true"
+      })
+
+      assert_push_event(view, "lamp_confirm_needed", %{lamp_id: _})
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.pending_destructive_action["destructive"] == "true"
+    end
+
+    test "lamp_confirm_destructive enqueues job and clears pending action", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_submit", %{
+        "lamp-id" => "aws.s3.create-bucket",
+        "endpoint-id" => "delete_bucket",
+        "destructive" => "true"
+      })
+
+      render_hook(view, "lamp_confirm_destructive", %{})
+
+      assert_enqueued(worker: LampActionWorker)
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.pending_destructive_action == nil
+    end
+
+    test "lamp_confirm_destructive with no pending action does nothing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_confirm_destructive", %{})
+
+      refute_enqueued(worker: LampActionWorker)
+    end
+  end
+
+  describe "lamp_row_select event" do
+    test "enqueues LampActionWorker job with row params", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "lamp_row_select", %{
+        "lamp-id" => "aws.ec2.list-instances",
+        "row-id" => "i-0abc1234",
+        "endpoint-id" => "restart_instance"
+      })
+
+      assert_enqueued(worker: LampActionWorker, args: %{"lamp_id" => "aws.ec2.list-instances"})
+    end
+  end
+
+  describe "approve_action event" do
+    test "with no pending approval does nothing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "approve_action", %{})
+
+      refute_enqueued(worker: Genie.Workers.ApprovalWorker)
+    end
+
+    test "with pending approval enqueues ApprovalWorker and clears pending", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      session_id = :sys.get_state(view.pid).socket.assigns.session_id
+      GenieWeb.CockpitLive.push_pending_approval(session_id, "action-123")
+      render(view)
+
+      render_hook(view, "approve_action", %{})
+
+      assert_enqueued(worker: Genie.Workers.ApprovalWorker, args: %{"decision" => "approve"})
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.pending_approval == nil
+    end
+  end
+
+  describe "deny_action event" do
+    test "with no pending approval does nothing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      render_hook(view, "deny_action", %{})
+
+      refute_enqueued(worker: Genie.Workers.ApprovalWorker)
+    end
+
+    test "with pending approval enqueues deny decision", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      session_id = :sys.get_state(view.pid).socket.assigns.session_id
+      GenieWeb.CockpitLive.push_pending_approval(session_id, "action-456")
+      render(view)
+
+      render_hook(view, "deny_action", %{})
+
+      assert_enqueued(worker: Genie.Workers.ApprovalWorker, args: %{"decision" => "deny"})
+    end
+  end
+
+  describe "handle_info :pending_approval" do
+    test "sets pending_approval assign", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/cockpit")
+
+      session_id = :sys.get_state(view.pid).socket.assigns.session_id
+      GenieWeb.CockpitLive.push_pending_approval(session_id, "action-789")
+
+      render(view)
+      assigns = :sys.get_state(view.pid).socket.assigns
+      assert assigns.pending_approval == "action-789"
     end
   end
 end

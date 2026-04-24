@@ -150,5 +150,57 @@ defmodule Genie.Orchestrator.Steps.FillUiStepTest do
                  []
                )
     end
+
+    test "returns {:continue, result} for action cases when lamp is in manifests" do
+      lamp = minimal_lamp()
+      action = mock_action()
+
+      result =
+        FillUiStep.compensate(
+          {:error, :llm_timeout},
+          %{validated_action: {:action, action}, manifests: [lamp], build_context: %{}},
+          %{},
+          []
+        )
+
+      assert {:continue, %{html: html, type: :canvas}} = result
+      assert is_binary(html)
+    end
+
+    test "returns :ok for action when lamp not found" do
+      action = mock_action("nonexistent.lamp")
+
+      result =
+        FillUiStep.compensate(
+          {:error, :llm_timeout},
+          %{validated_action: {:action, action}, manifests: [], build_context: %{}},
+          %{},
+          []
+        )
+
+      assert :ok = result
+    end
+  end
+
+  describe "run/3 — LLM error fallback" do
+    test "continues with empty infer values when LLM fill fails" do
+      Process.put(:mock_llm_object, {:error, :timeout})
+
+      lamp = minimal_lamp()
+      action = mock_action()
+
+      assert {:ok, %{html: html, type: :canvas}} =
+               FillUiStep.run(
+                 %{
+                   validated_action: {:action, action},
+                   manifests: [lamp],
+                   build_context: build_context()
+                 },
+                 %{},
+                 []
+               )
+
+      assert is_binary(html)
+    end
   end
 end

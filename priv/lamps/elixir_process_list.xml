@@ -28,7 +28,7 @@
     <endpoint
       id="fetch_process"
       method="GET"
-      path="/elixir/processes/{pid}"
+      path="/elixir/processes/{id}"
       trigger="on-submit"
       action-id="submit_detail"/>
   </endpoints>

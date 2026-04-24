@@ -179,6 +179,168 @@ defmodule Genie.Workers.LampActionWorkerTest do
     end
   end
 
+  describe "perform/1 — demo actor bypasses approval" do
+    test "demo actor skips approval and executes lamp directly" do
+      Application.put_env(:genie, :demo_actor_email, "demo@genie.dev")
+      org = create_org!()
+
+      demo_user =
+        User
+        |> Ash.Changeset.for_create(:register_with_password, %{
+          email: "demo@genie.dev",
+          password: "password123",
+          password_confirmation: "password123"
+        })
+        |> Ash.create!(authorize?: false)
+
+      demo_user =
+        demo_user
+        |> Ash.Changeset.for_update(:update, %{org_id: org.id, role: :admin})
+        |> Ash.update!(authorize?: false)
+
+      register_global_lamp!(@ec2_xml)
+      session_id = Ecto.UUID.generate()
+
+      Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
+
+      Req.Test.stub(Genie.Bridge, fn conn ->
+        Req.Test.json(conn, %{
+          "state" => "ready",
+          "region" => "us-east-1",
+          "instances" => []
+        })
+      end)
+
+      assert :ok =
+               LampActionWorker.perform(%Oban.Job{
+                 args: %{
+                   "lamp_id" => "aws.ec2.list-instances",
+                   "endpoint_id" => "list_instances",
+                   "params" => %{"region" => "us-east-1"},
+                   "actor_id" => demo_user.id,
+                   "session_id" => session_id
+                 }
+               })
+
+      assert_receive {:push_canvas, _html}
+    end
+  end
+
+  describe "perform/1 — webhook trigger" do
+    test "webhook trigger broadcasts incident html to active sessions" do
+      pagerduty_xml = File.read!(Path.join([:code.priv_dir(:genie), "lamps", "pagerduty_incidents.xml"]))
+      register_global_lamp!(pagerduty_xml)
+
+      Req.Test.stub(Genie.Bridge, fn conn ->
+        Req.Test.json(conn, %{
+          "incidents" => [
+            %{"id" => "P001", "title" => "DB down", "status" => "triggered", "urgency" => "high"}
+          ]
+        })
+      end)
+
+      result =
+        LampActionWorker.perform(%Oban.Job{
+          args: %{
+            "trigger" => "webhook",
+            "lamp_id" => "pagerduty.incidents.list",
+            "org_id" => nil
+          }
+        })
+
+      assert result == :ok
+    end
+
+    test "webhook with Bridge error returns error tuple" do
+      org = create_org!()
+      pagerduty_xml = File.read!(Path.join([:code.priv_dir(:genie), "lamps", "pagerduty_incidents.xml"]))
+      register_global_lamp!(pagerduty_xml)
+
+      Req.Test.stub(Genie.Bridge, fn conn ->
+        Plug.Conn.send_resp(conn, 500, "error")
+      end)
+
+      result =
+        LampActionWorker.perform(%Oban.Job{
+          args: %{
+            "trigger" => "webhook",
+            "lamp_id" => "pagerduty.incidents.list",
+            "org_id" => org.id
+          }
+        })
+
+      assert {:error, _reason} = result
+    end
+  end
+
+  describe "perform/1 — S3 poll loop" do
+    test "demo actor triggers poll after execution and exits on condition met" do
+      Application.put_env(:genie, :demo_actor_email, "demo-poll@genie.dev")
+      on_exit(fn -> Application.delete_env(:genie, :demo_actor_email) end)
+
+      org = create_org!()
+
+      demo_user =
+        User
+        |> Ash.Changeset.for_create(:register_with_password, %{
+          email: "demo-poll@genie.dev",
+          password: "password123",
+          password_confirmation: "password123"
+        })
+        |> Ash.create!(authorize?: false)
+
+      demo_user =
+        demo_user
+        |> Ash.Changeset.for_update(:update, %{org_id: org.id, role: :admin})
+        |> Ash.update!(authorize?: false)
+
+      register_global_lamp!(@valid_xml)
+      session_id = Ecto.UUID.generate()
+
+      Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
+
+      # Create stub that returns submitting first, then ready on poll
+      agent = start_supervised!({Agent, fn -> 0 end})
+
+      Req.Test.stub(Genie.Bridge, fn conn ->
+        count = Agent.get_and_update(agent, fn c -> {c, c + 1} end)
+
+        if count == 0 do
+          Req.Test.json(conn, %{
+            "state" => "submitting",
+            "bucket_name" => "test-bucket",
+            "region" => "us-east-1"
+          })
+        else
+          Req.Test.json(conn, %{
+            "status" => "ready",
+            "state" => "ready",
+            "bucket_name" => "test-bucket",
+            "region" => "us-east-1",
+            "console_url" => "https://console.aws.amazon.com/s3"
+          })
+        end
+      end)
+
+      assert :ok =
+               LampActionWorker.perform(%Oban.Job{
+                 args: %{
+                   "lamp_id" => "aws.s3.create-bucket",
+                   "endpoint_id" => "create_bucket",
+                   "params" => %{
+                     "bucket_name" => "test-bucket",
+                     "region" => "us-east-1",
+                     "access" => "private"
+                   },
+                   "actor_id" => demo_user.id,
+                   "session_id" => session_id
+                 }
+               })
+
+      assert_receive {:push_canvas, _html}, 10_000
+    end
+  end
+
   describe "perform/1 — EC2 instance listing" do
     test "renders table of instances on submit and broadcasts push_canvas" do
       org = create_org!()

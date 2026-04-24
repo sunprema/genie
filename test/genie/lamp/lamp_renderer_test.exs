@@ -14,6 +14,14 @@ defmodule Genie.Lamp.LampRendererTest do
   @s3_xml File.read!(Path.join(:code.priv_dir(:genie), "lamps/aws_s3_create_bucket.xml"))
   @snapshot_path Path.join([__DIR__, "..", "..", "fixtures", "lamp_renderer", "aws_s3_create_bucket_snapshot.html"])
 
+  @snapshot_lamps [
+    {"aws_ec2_list_instances", "aws_ec2_list_instances.xml"},
+    {"aws_s3_create_bucket", "aws_s3_create_bucket.xml"},
+    {"elixir_process_list", "elixir_process_list.xml"},
+    {"github_pull_requests", "github_pull_requests.xml"},
+    {"pagerduty_incidents", "pagerduty_incidents.xml"}
+  ]
+
   defp parse_s3!, do: elem(LampParser.parse(@s3_xml), 1)
 
   defp render_to_string(defn) do
@@ -21,7 +29,16 @@ defmodule Genie.Lamp.LampRendererTest do
     IO.iodata_to_binary(iodata)
   end
 
-  # --- Snapshot test ---
+  defp snapshot_path(lamp_name) do
+    Path.join([__DIR__, "..", "..", "fixtures", "lamp_renderer", "#{lamp_name}_snapshot.html"])
+  end
+
+  defp parse_lamp!(xml_file) do
+    xml = File.read!(Path.join(:code.priv_dir(:genie), "lamps/#{xml_file}"))
+    elem(LampParser.parse(xml), 1)
+  end
+
+  # --- Snapshot tests for all 5 lamps ---
 
   describe "render/1 snapshot" do
     test "matches saved snapshot for aws_s3_create_bucket" do
@@ -34,6 +51,25 @@ defmodule Genie.Lamp.LampRendererTest do
         File.mkdir_p!(Path.dirname(@snapshot_path))
         File.write!(@snapshot_path, html)
         IO.puts("Snapshot saved to #{@snapshot_path}")
+      end
+    end
+
+    for {lamp_name, xml_file} <- @snapshot_lamps, lamp_name != "aws_s3_create_bucket" do
+      @lamp_name lamp_name
+      @xml_file xml_file
+
+      test "matches saved snapshot for #{lamp_name}" do
+        defn = parse_lamp!(@xml_file)
+        html = render_to_string(defn)
+        path = snapshot_path(@lamp_name)
+
+        if File.exists?(path) do
+          assert html == File.read!(path)
+        else
+          File.mkdir_p!(Path.dirname(path))
+          File.write!(path, html)
+          IO.puts("Snapshot saved to #{path}")
+        end
       end
     end
   end

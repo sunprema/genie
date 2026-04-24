@@ -95,6 +95,54 @@ defmodule Genie.Orchestrator.Steps.ToolExecutionLoopStepTest do
     }
   end
 
+  describe "run/3 — tool execution with known tool" do
+    setup do
+      ec2_xml = File.read!(Path.join(:code.priv_dir(:genie), "lamps/aws_ec2_list_instances.xml"))
+
+      Genie.Lamp.LampRegistry
+      |> Ash.Changeset.for_create(:register, %{org_id: nil, xml_source: ec2_xml, enabled: true})
+      |> Ash.create!(authorize?: false)
+
+      :ok
+    end
+
+    test "executes tool call and continues loop when LLM returns message" do
+      tool_registry = %{"aws_ec2_list_regions" => {"aws.ec2.list-instances", "load_regions"}}
+
+      Req.Test.stub(Genie.Bridge, fn conn ->
+        Req.Test.json(conn, [
+          %{"code" => "us-east-1", "name" => "US East (N. Virginia)"}
+        ])
+      end)
+
+      Process.put(:mock_llm_response, {:ok, MockReqLLM.build_message_response("Done")})
+
+      tool_call = ReqLLM.ToolCall.new("call_001", "aws_ec2_list_regions", "{}")
+
+      data = %{calls: [tool_call], llm_context: Context.new([])}
+
+      assert {:ok, {:message, %{text: "Done"}}} =
+               ToolExecutionLoopStep.run(
+                 %{llm_response: {:tool_call, data}, build_context: build_context(tool_registry)},
+                 %{},
+                 []
+               )
+    end
+
+    test "returns error for unknown tool" do
+      tool_call = ReqLLM.ToolCall.new("call_002", "unknown_tool", "{}")
+
+      data = %{calls: [tool_call], llm_context: Context.new([])}
+
+      assert {:error, {:unknown_tool, "unknown_tool"}} =
+               ToolExecutionLoopStep.run(
+                 %{llm_response: {:tool_call, data}, build_context: build_context(%{})},
+                 %{},
+                 []
+               )
+    end
+  end
+
   describe "compensate/4" do
     test "always returns :ok" do
       assert :ok = ToolExecutionLoopStep.compensate({:error, :test}, %{}, %{}, [])

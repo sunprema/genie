@@ -55,7 +55,7 @@ defmodule Genie.Orchestrator.Steps.ToolExecutionLoopStep do
 
   defp execute_tool_calls(calls, tool_registry, llm_context, iteration) do
     Enum.reduce_while(calls, {:ok, llm_context}, fn call, {:ok, ctx} ->
-      tool_name = Map.get(call, :name) || Map.get(call, "name") || "unknown"
+      tool_name = tool_name(call)
 
       Tracer.with_span "Genie.tool.execute", %{
         attributes: [{"tool_name", to_string(tool_name)}, {"iteration", iteration}]
@@ -69,17 +69,36 @@ defmodule Genie.Orchestrator.Steps.ToolExecutionLoopStep do
   end
 
   defp execute_single_tool(call, tool_registry, llm_context) do
-    tool_name = Map.get(call, :name) || Map.get(call, "name")
+    tool_name = tool_name(call)
 
     case Map.fetch(tool_registry, tool_name) do
       {:ok, {lamp_id, endpoint_id}} ->
-        params = Map.get(call, :arguments) || Map.get(call, "arguments") || %{}
+        params = tool_arguments(call)
         execute_lamp_tool(lamp_id, endpoint_id, params, llm_context)
 
       :error ->
         {:error, {:unknown_tool, tool_name}}
     end
   end
+
+  defp tool_name(%{function: %{name: name}}), do: name
+  defp tool_name(%{function: %{"name" => name}}), do: name
+  defp tool_name(call), do: Map.get(call, :name) || Map.get(call, "name")
+
+  defp tool_arguments(%{function: %{arguments: args}}) when is_map(args), do: args
+  defp tool_arguments(%{function: %{arguments: args}}) when is_binary(args) do
+    case Jason.decode(args) do
+      {:ok, map} -> map
+      _ -> %{}
+    end
+  end
+  defp tool_arguments(%{function: %{"arguments" => args}}) when is_binary(args) do
+    case Jason.decode(args) do
+      {:ok, map} -> map
+      _ -> %{}
+    end
+  end
+  defp tool_arguments(call), do: Map.get(call, :arguments) || Map.get(call, "arguments") || %{}
 
   defp execute_lamp_tool(lamp_id, endpoint_id, params, llm_context) do
     with {:ok, lamp} <- LampRegistry.fetch_lamp(lamp_id),

@@ -1,0 +1,94 @@
+<div class="w-full max-w-[780px] bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col self-start" role="region" aria-label="GitHub Pull Request Viewer">
+  <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-3.5">
+  <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center text-amber-800 font-mono text-xs font-medium flex-none border border-amber-900/10" aria-hidden="true">
+    GI
+  </div>
+  <div class="flex-1 min-w-0">
+    <div class="text-[15px] text-slate-900 font-medium flex items-center gap-2 flex-wrap">
+      GitHub Pull Request Viewer
+      <span class="font-mono text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-100 whitespace-nowrap">
+        GenieLamp
+      </span>
+    </div>
+    <div class="text-xs text-slate-500 mt-0.5 font-mono truncate">
+      github.pulls.list
+    </div>
+  </div>
+</div>
+  <form role="form" aria-label="List Pull Requests" aria-describedby="form-prs-description" phx-submit="lamp_submit" phx-value-lamp-id="github.pulls.list" phx-change="lamp_field_change">
+  
+    <p id="form-prs-description" class="text-sm text-slate-500 px-5 pt-4 leading-relaxed">
+      View open, closed, or all pull requests for a GitHub repository.
+    </p>
+  
+  <div class="px-5 py-4 grid grid-cols-2 gap-x-5 gap-y-4">
+    
+      <div class="flex flex-col gap-1.5 col-span-1 ">
+  <label class="text-xs text-slate-500 flex items-center gap-1.5">
+    Repository
+    
+      <span class="text-red-400" aria-hidden="true">*</span>
+    
+    
+    <span class="font-mono text-[9.5px] px-1 py-0.5 bg-teal-50 text-teal-600 border border-teal-100 rounded leading-none">
+      context
+    </span>
+  
+  </label>
+  <input type="text" class="h-9 w-full border rounded-lg px-3 bg-white font-sans text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-blue-50 transition border-teal-300 bg-teal-50/50" aria-label="GitHub repository in owner/repo format, e.g. acme/platform" aria-required="true" aria-describedby="hint-repo" name="repo" value="" placeholder="owner/repo">
+    
+  
+    <p id="hint-repo" class="text-[11.5px] text-slate-500">
+      Enter the full repository path, e.g. acme/platform.
+    </p>
+  
+</div>
+    
+      <div class="flex flex-col gap-1.5 col-span-1 ">
+  <label class="text-xs text-slate-500 flex items-center gap-1.5">
+    PR State
+    
+      <span class="text-red-400" aria-hidden="true">*</span>
+    
+    
+    <span class="font-mono text-[9.5px] px-1 py-0.5 bg-purple-50 text-purple-600 border border-purple-100 rounded leading-none">
+      AI
+    </span>
+  
+  </label>
+  <select class="h-9 w-full border rounded-lg px-3 bg-white font-sans text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-blue-50 transition appearance-none cursor-pointer border-purple-300 bg-purple-50/50" aria-label="Filter pull requests by state: open, closed, or all" aria-required="true" name="state">
+  
+      
+        <option value="open" selected>
+          Open
+        </option>
+      
+        <option value="closed">
+          Closed
+        </option>
+      
+        <option value="all">
+          All
+        </option>
+      
+    
+</select>
+    
+  
+</div>
+    
+    
+  </div>
+  <div class="border-t border-slate-100 px-5 py-3.5 flex items-center gap-2.5 bg-slate-50" role="group" aria-label="Form actions">
+  
+    <button type="button" class="h-[34px] px-4 flex items-center gap-1.5 rounded-lg font-sans text-[13px] font-medium cursor-pointer border transition bg-slate-900 text-white border-slate-900 hover:bg-slate-800" aria-label="Submit form to list pull requests with the selected filters" phx-click="lamp_submit" phx-value-lamp-id="github.pulls.list" phx-value-endpoint-id="list_prs" phx-value-destructive="false">
+  List PRs
+</button>
+  
+    <button type="button" class="h-[34px] px-4 flex items-center gap-1.5 rounded-lg font-sans text-[13px] font-medium cursor-pointer border transition bg-white text-slate-900 border-slate-200 hover:border-slate-300" aria-label="Fetch detail for the selected pull request" phx-click="lamp_submit" phx-value-lamp-id="github.pulls.list" phx-value-endpoint-id="fetch_pr_detail" phx-value-destructive="false">
+  View PR
+</button>
+  
+</div>
+</form>
+</div>

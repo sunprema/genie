@@ -1,0 +1,94 @@
+<div class="w-full max-w-[780px] bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col self-start" role="region" aria-label="AWS EC2 Instance Viewer">
+  <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-3.5">
+  <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center text-amber-800 font-mono text-xs font-medium flex-none border border-amber-900/10" aria-hidden="true">
+    EC2
+  </div>
+  <div class="flex-1 min-w-0">
+    <div class="text-[15px] text-slate-900 font-medium flex items-center gap-2 flex-wrap">
+      AWS EC2 Instance Viewer
+      <span class="font-mono text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-100 whitespace-nowrap">
+        GenieLamp
+      </span>
+    </div>
+    <div class="text-xs text-slate-500 mt-0.5 font-mono truncate">
+      aws.ec2.list-instances
+    </div>
+  </div>
+</div>
+  <form role="form" aria-label="List EC2 Instances" aria-describedby="form-ec2-description" phx-submit="lamp_submit" phx-value-lamp-id="aws.ec2.list-instances" phx-change="lamp_field_change">
+  
+    <p id="form-ec2-description" class="text-sm text-slate-500 px-5 pt-4 leading-relaxed">
+      Filter and view EC2 instances by region and state.
+    </p>
+  
+  <div class="px-5 py-4 grid grid-cols-2 gap-x-5 gap-y-4">
+    
+      <div class="flex flex-col gap-1.5 col-span-1 ">
+  <label class="text-xs text-slate-500 flex items-center gap-1.5">
+    AWS Region
+    
+      <span class="text-red-400" aria-hidden="true">*</span>
+    
+    
+    <span class="font-mono text-[9.5px] px-1 py-0.5 bg-teal-50 text-teal-600 border border-teal-100 rounded leading-none">
+      context
+    </span>
+  
+  </label>
+  <select class="h-9 w-full border rounded-lg px-3 bg-white font-sans text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-blue-50 transition appearance-none cursor-pointer border-teal-300 bg-teal-50/50" aria-label="AWS region to query for EC2 instances" aria-required="true" name="region">
+  
+      <option value="">Select...</option>
+  
+</select>
+    
+  
+    <p id="hint-region" class="text-[11.5px] text-slate-500">
+      Select the AWS region to query.
+    </p>
+  
+</div>
+    
+      <div class="flex flex-col gap-1.5 col-span-1 ">
+  <label class="text-xs text-slate-500 flex items-center gap-1.5">
+    Instance State
+    
+      <span class="text-red-400" aria-hidden="true">*</span>
+    
+    
+    <span class="font-mono text-[9.5px] px-1 py-0.5 bg-purple-50 text-purple-600 border border-purple-100 rounded leading-none">
+      AI
+    </span>
+  
+  </label>
+  <select class="h-9 w-full border rounded-lg px-3 bg-white font-sans text-[13px] text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-[3px] focus:ring-blue-50 transition appearance-none cursor-pointer border-purple-300 bg-purple-50/50" aria-label="Filter EC2 instances by state: running, stopped, or all" aria-required="true" name="state">
+  
+      
+        <option value="running" selected>
+          Running
+        </option>
+      
+        <option value="stopped">
+          Stopped
+        </option>
+      
+        <option value="all">
+          All
+        </option>
+      
+    
+</select>
+    
+  
+</div>
+    
+    
+  </div>
+  <div class="border-t border-slate-100 px-5 py-3.5 flex items-center gap-2.5 bg-slate-50" role="group" aria-label="Form actions">
+  
+    <button type="button" class="h-[34px] px-4 flex items-center gap-1.5 rounded-lg font-sans text-[13px] font-medium cursor-pointer border transition bg-slate-900 text-white border-slate-900 hover:bg-slate-800" aria-label="Submit form to list EC2 instances with the selected filters" phx-click="lamp_submit" phx-value-lamp-id="aws.ec2.list-instances" phx-value-endpoint-id="list_instances" phx-value-destructive="false">
+  List Instances
+</button>
+  
+</div>
+</form>
+</div>

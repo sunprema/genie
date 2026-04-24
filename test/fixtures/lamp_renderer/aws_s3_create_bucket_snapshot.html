@@ -253,7 +253,7 @@
   </div>
   <div class="border-t border-slate-100 px-5 py-3.5 flex items-center gap-2.5 bg-slate-50" role="group" aria-label="Form actions">
   
-    <button type="submit" class="h-[34px] px-4 flex items-center gap-1.5 rounded-lg font-sans text-[13px] font-medium cursor-pointer border transition bg-slate-900 text-white border-slate-900 hover:bg-slate-800" aria-label="Submit form to create the S3 bucket with the configured settings" phx-value-lamp-id="aws.s3.create-bucket" phx-value-destructive="false">
+    <button type="button" class="h-[34px] px-4 flex items-center gap-1.5 rounded-lg font-sans text-[13px] font-medium cursor-pointer border transition bg-slate-900 text-white border-slate-900 hover:bg-slate-800" aria-label="Submit form to create the S3 bucket with the configured settings" phx-click="lamp_submit" phx-value-lamp-id="aws.s3.create-bucket" phx-value-endpoint-id="create_bucket" phx-value-destructive="false">
   Create Bucket
 </button>
   
