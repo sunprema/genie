@@ -198,6 +198,20 @@
         </div>
         <div class="right">
           <div class="ck-status-pill"><span class="dot"></span>bridge · healthy</div>
+          <%= if @active_lamp_id do %>
+            <button
+              type="button"
+              phx-click="close_lamp"
+              class="ck-iconbtn ghost"
+              title="Close lamp"
+              aria-label="Close the active lamp and return to the lamp picker"
+            >
+              <svg class="ck-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+              Close
+            </button>
+          <% end %>
           <button type="button" class="ck-iconbtn ghost" title="Expand">
             <svg class="ck-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
               <path d="M15 3h6v6"/><path d="M9 21H3v-6"/>
@@ -216,28 +230,28 @@
       >
         <div class="ck-empty">
           <div class="em">Ask, and it's <em>done.</em></div>
-          <div class="sub">Describe a task in plain English. Genie will find the right tool and bring it here.</div>
+          <div class="sub">Describe a task in plain English, or pick a lamp below.</div>
           <div class="hint-grid">
-            <div class="ck-hint">
-              <div class="t">Create an S3 bucket</div>
-              <div class="s">For nightly analytics exports</div>
-              <div class="k">aws · storage</div>
-            </div>
-            <div class="ck-hint">
-              <div class="t">Check a deploy</div>
-              <div class="s">Last deploy of api-gateway</div>
-              <div class="k">ci · gitlab</div>
-            </div>
-            <div class="ck-hint">
-              <div class="t">Find on-call</div>
-              <div class="s">Payments rotation</div>
-              <div class="k">pagerduty</div>
-            </div>
-            <div class="ck-hint">
-              <div class="t">Rotate a secret</div>
-              <div class="s">Stripe, prod-us-east-1</div>
-              <div class="k">vault</div>
-            </div>
+            <%= if @lamps == [] do %>
+              <div class="ck-hint">
+                <div class="t">No lamps available</div>
+                <div class="s">Run <code>mix genie.lamps.load</code> to register lamps.</div>
+                <div class="k">setup</div>
+              </div>
+            <% else %>
+              <button
+                :for={lamp <- @lamps}
+                type="button"
+                class="ck-hint"
+                phx-click="launch_lamp"
+                phx-value-lamp-id={lamp.id}
+                aria-label={"Launch #{lamp_title(lamp)}"}
+              >
+                <div class="t"><%= lamp_title(lamp) %></div>
+                <div class="s"><%= lamp_description(lamp) %></div>
+                <div class="k"><%= lamp_kicker(lamp) %></div>
+              </button>
+            <% end %>
           </div>
         </div>
       </div>

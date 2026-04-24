@@ -9,6 +9,7 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
   """
   use Reactor.Step
 
+  alias Genie.Bridge
   alias Genie.Conversation.Turn
   alias Genie.Lamp.LampDefinition
   alias ReqLLM.Context
@@ -17,6 +18,8 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
 
   @impl Reactor.Step
   def run(%{session: session, manifests: manifests, user_message: user_message}, _context, _options) do
+    manifests = Enum.map(manifests, &Bridge.populate_options/1)
+
     with {:ok, turns} <- load_recent_turns(session.id) do
       {tools, tool_registry} = build_tools(manifests)
       system_prompt = build_system_prompt(manifests)
@@ -78,15 +81,14 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
           |> Enum.filter(&(&1.trigger == :on_submit))
           |> Enum.map_join(", ", & &1.id)
 
-        # Only show fields the LLM must supply — from-context and infer are auto-filled
-        explicit_fields =
+        field_lines =
           (fields || [])
-          |> Enum.filter(&(&1.genie_fill == :none && &1.type != :hidden))
-          |> Enum.map_join(", ", & &1.id)
+          |> Enum.reject(&(&1.type == :hidden))
+          |> Enum.map_join("\n    ", &describe_field/1)
 
-        explicit_note = if explicit_fields == "", do: "(all fields are auto-filled)", else: "explicit params: #{explicit_fields}"
+        field_note = if field_lines == "", do: "(no user-visible fields)", else: "params:\n    #{field_lines}"
 
-        "lamp_id=\"#{id}\" (#{title})\n  description: #{desc}\n  endpoint_id: #{submit_endpoints}\n  #{explicit_note}"
+        "lamp_id=\"#{id}\" (#{title})\n  description: #{desc}\n  endpoint_id: #{submit_endpoints}\n  #{field_note}"
       end)
 
     lamp_ids = invokable |> Enum.map_join(", ", & &1.id)
@@ -97,8 +99,9 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
       Invoke a GenieLamp tool immediately when the user's intent is clear.
 
       IMPORTANT: Call this tool right away — do NOT ask clarifying questions first.
-      Most fields are auto-filled from conversation context or inferred by AI.
-      Only provide params for fields explicitly listed as "explicit params".
+      In the `params` map, include any field value the user's message clearly implies.
+      For select/radio fields use the exact value codes listed, never the labels.
+      Fields you cannot infer can be omitted — the form will let the user fill them.
 
       lamp_id MUST be one of: #{lamp_ids}
 
@@ -108,10 +111,38 @@ defmodule Genie.Orchestrator.Steps.BuildContextStep do
       parameter_schema: [
         lamp_id: [type: :string, required: true, doc: "REQUIRED. One of: #{lamp_ids}"],
         endpoint_id: [type: :string, required: true, doc: "REQUIRED. The exact endpoint_id shown above"],
-        params: [type: :map, required: false, doc: "Only explicit params (auto-filled fields do not need to be provided)"]
+        params: [type: :map, required: false, doc: "Map of field_id → value. Use exact option codes for select/radio."]
       ],
       callback: fn _args -> {:ok, "handled by Genie Reactor"} end
     )
+  end
+
+  defp describe_field(field) do
+    label = field.label || field.id
+    required = if field.required, do: " [required]", else: ""
+
+    type_hint =
+      case field.type do
+        type when type in [:select, :radio] ->
+          codes =
+            (field.options || [])
+            |> Enum.map(fn opt -> "#{opt.value}=\"#{opt.label}\"" end)
+            |> Enum.join(", ")
+
+          if codes == "", do: "(#{field.type}, no codes available)", else: "(#{field.type}; values: #{codes})"
+
+        :checkbox_group ->
+          codes =
+            (field.options || [])
+            |> Enum.map_join(", ", & &1.value)
+
+          if codes == "", do: "(checkbox_group)", else: "(checkbox_group; values: #{codes})"
+
+        other ->
+          "(#{other})"
+      end
+
+    "- #{field.id}: #{label}#{required} #{type_hint}"
   end
 
   defp build_data_tools(manifests) do

@@ -1,7 +1,14 @@
 const CanvasHook = {
   mounted() {
+    this.initialHTML = this.el.innerHTML
+
     this.handleEvent("update_canvas", ({ html }) => {
       this.el.innerHTML = html
+      this.el.scrollTop = 0
+    })
+
+    this.handleEvent("reset_canvas", () => {
+      this.el.innerHTML = this.initialHTML
       this.el.scrollTop = 0
     })
 

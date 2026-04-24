@@ -517,12 +517,12 @@ defmodule Genie.Lamp.LampRenderer do
                 aria-selected="false"
                 phx-click="lamp_row_select"
                 phx-value-lamp-id={@lamp_id}
-                phx-value-row-id={Map.get(row, @field.row_id_key, "")}
+                phx-value-row-id={lookup(row, @field.row_id_key)}
                 phx-value-endpoint-id={@field.row_click_endpoint}
                 class="border-b border-slate-100 hover:bg-slate-50 cursor-pointer">
                 <%= for col <- (@field.columns || []) do %>
                   <td class="px-3 py-2 text-slate-700">
-                    <%= Map.get(row, col.key, "") %>
+                    <%= lookup(row, col.key) %>
                   </td>
                 <% end %>
               </tr>
@@ -530,7 +530,7 @@ defmodule Genie.Lamp.LampRenderer do
               <tr class="border-b border-slate-100 hover:bg-slate-50">
                 <%= for col <- (@field.columns || []) do %>
                   <td class="px-3 py-2 text-slate-700">
-                    <%= Map.get(row, col.key, "") %>
+                    <%= lookup(row, col.key) %>
                   </td>
                 <% end %>
               </tr>
@@ -557,7 +557,7 @@ defmodule Genie.Lamp.LampRenderer do
       aria-label={interpolate(@field.aria_label, @vars)}
       class="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white overflow-hidden">
       <%= for col <- (@field.columns || []) do %>
-        <% val = Map.get(@item, col.key, "") %>
+        <% val = lookup(@item, col.key) %>
         <div class="flex gap-3 px-4 py-2.5 border-b border-slate-100 last:border-0">
           <span class="text-xs text-slate-500 font-medium w-32 flex-none pt-0.5"
             aria-label={col.label}>
@@ -593,6 +593,30 @@ defmodule Genie.Lamp.LampRenderer do
     else
       String.slice(last, 0, 2) |> String.upcase()
     end
+  end
+
+  defp lookup(_row, nil), do: ""
+
+  defp lookup(row, key) when is_map(row) and is_binary(key) do
+    case Map.fetch(row, key) do
+      {:ok, value} -> value
+      :error -> Map.get(row, safe_atom(key), "")
+    end
+  end
+
+  defp lookup(row, key) when is_map(row) and is_atom(key) do
+    case Map.fetch(row, key) do
+      {:ok, value} -> value
+      :error -> Map.get(row, Atom.to_string(key), "")
+    end
+  end
+
+  defp lookup(_row, _key), do: ""
+
+  defp safe_atom(key) do
+    String.to_existing_atom(key)
+  rescue
+    ArgumentError -> nil
   end
 
   defp effective_value(%FieldDef{value: value}) when not is_nil(value), do: value

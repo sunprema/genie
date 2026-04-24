@@ -11,6 +11,7 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
 
   require OpenTelemetry.Tracer, as: Tracer
 
+  alias Genie.Bridge
   alias Genie.Lamp.{LampDefinition, LampRegistry, LampRenderer}
   alias Genie.Orchestrator.LlmClient
 
@@ -29,7 +30,7 @@ defmodule Genie.Orchestrator.Steps.FillUiStep do
           {"context_count", context_count}
         ]
       } do
-        html = lamp_to_html(filled)
+        html = filled |> Bridge.populate_options() |> lamp_to_html()
         {:ok, %{html: html, lamp_id: action.lamp_id, type: :canvas}}
       end
     end
@@ -44,7 +45,7 @@ def run(%{validated_action: {:message, %{text: text}}}, _context, _options) do
     case find_lamp(action.lamp_id, manifests) do
       {:ok, lamp} ->
         filled = fill_none_strategy(lamp)
-        html = lamp_to_html(filled)
+        html = filled |> Bridge.populate_options() |> lamp_to_html()
         {:continue, %{html: html, lamp_id: action.lamp_id, type: :canvas}}
 
       _ ->

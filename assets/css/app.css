@@ -433,6 +433,7 @@
 .cockpit-page .ck-hint {
   padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px;
   background: var(--surface); cursor: pointer; transition: all .15s ease;
+  font: inherit; color: inherit; text-align: left; width: 100%; display: block;
 }
 .cockpit-page .ck-hint:hover { border-color: var(--mute-2); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 .cockpit-page .ck-hint .t { font-size: 13px; color: var(--ink); font-weight: 500; }

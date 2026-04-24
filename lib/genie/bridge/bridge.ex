@@ -42,6 +42,33 @@ defmodule Genie.Bridge do
     end
   end
 
+  @doc """
+  Eagerly populates the `:options` list for every field on the lamp that declares
+  `options-from`. Failed lookups leave the field untouched so the UI still renders.
+  """
+  @spec populate_options(LampDefinition.t()) :: LampDefinition.t()
+  def populate_options(%LampDefinition{fields: nil} = lamp), do: lamp
+
+  def populate_options(%LampDefinition{fields: fields} = lamp) do
+    updated =
+      Enum.map(fields, fn
+        %FieldDef{options_from: from} = field when is_binary(from) and from != "" ->
+          case fetch_options(lamp, field) do
+            {:ok, pairs} ->
+              options = Enum.map(pairs, fn {v, l} -> %Genie.Lamp.OptionDef{value: v, label: l} end)
+              %{field | options: options, options_from: nil}
+
+            {:error, _} ->
+              field
+          end
+
+        field ->
+          field
+      end)
+
+    %{lamp | fields: updated}
+  end
+
   @spec execute_tool(request()) :: {:ok, map()} | {:error, term()}
   def execute_tool(%{lamp: lamp, endpoint_id: endpoint_id, params: params} = req) do
     with {:ok, endpoint} <- find_endpoint(lamp, endpoint_id),

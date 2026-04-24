@@ -3,7 +3,9 @@ defmodule GenieWeb.CockpitLive do
 
   require OpenTelemetry.Tracer, as: Tracer
 
+  alias Genie.Bridge
   alias Genie.Conversation.Session
+  alias Genie.Lamp.{LampRegistry, LampRenderer}
   alias Genie.Workers.{ApprovalWorker, LampActionWorker, OrchestratorWorker}
 
   on_mount {GenieWeb.LiveUserAuth, :live_user_required}
@@ -11,6 +13,7 @@ defmodule GenieWeb.CockpitLive do
   def mount(_params, _session, socket) do
     user = socket.assigns[:current_user]
     session_id = create_db_session(user)
+    lamps = load_lamps(user)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Genie.PubSub, "canvas:#{session_id}")
@@ -23,6 +26,8 @@ defmodule GenieWeb.CockpitLive do
        message: "",
        page_title: "Cockpit",
        session_id: session_id,
+       lamps: lamps,
+       active_lamp_id: nil,
        lamp_field_values: %{},
        lamp_group_states: %{},
        pending_approval: nil,
@@ -57,6 +62,34 @@ defmodule GenieWeb.CockpitLive do
        |> stream_insert(:messages, build_user_message(socket, message))
        |> assign(message: "")}
     end
+  end
+
+  def handle_event("launch_lamp", %{"lamp-id" => lamp_id}, socket) do
+    case Enum.find(socket.assigns.lamps, &(&1.id == lamp_id)) do
+      nil ->
+        {:noreply, socket}
+
+      lamp ->
+        {:safe, iodata} = lamp |> Bridge.populate_options() |> LampRenderer.render()
+        html = IO.iodata_to_binary(iodata)
+
+        {:noreply,
+         socket
+         |> assign(lamp_field_values: %{}, active_lamp_id: lamp_id)
+         |> push_event("update_canvas", %{html: html})}
+    end
+  end
+
+  def handle_event("close_lamp", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       active_lamp_id: nil,
+       lamp_field_values: %{},
+       lamp_group_states: %{},
+       pending_destructive_action: nil
+     )
+     |> push_event("reset_canvas", %{})}
   end
 
   def handle_event("lamp_submit", %{"destructive" => "true"} = params, socket) do
@@ -236,6 +269,27 @@ defmodule GenieWeb.CockpitLive do
 
   defp format_error(reason) when is_binary(reason), do: reason
   defp format_error(reason), do: inspect(reason)
+
+  def lamp_title(%{meta: %{title: title}}) when is_binary(title) and title != "", do: title
+  def lamp_title(%{id: id}), do: id
+
+  def lamp_description(%{meta: %{description: d}}) when is_binary(d) and d != "", do: d
+  def lamp_description(_), do: ""
+
+  def lamp_kicker(lamp) do
+    [lamp.vendor, lamp.category]
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> Enum.join(" · ")
+  end
+
+  defp load_lamps(user) do
+    org_id = user && user.org_id
+
+    case LampRegistry.load_active_manifests(org_id) do
+      {:ok, lamps} -> lamps
+      {:error, _} -> []
+    end
+  end
 
   defp create_db_session(nil), do: Ecto.UUID.generate()
 
