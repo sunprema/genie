@@ -25,14 +25,19 @@ defmodule Genie.Conductor do
     |> Ash.create(actor: actor)
   end
 
-  @spec execute(LampAction.t()) :: {:ok, String.t()} | {:error, term()}
-  def execute(%LampAction{} = lamp_action) do
+  @spec execute(LampAction.t(), keyword()) :: {:ok, String.t()} | {:error, term()}
+  def execute(%LampAction{} = lamp_action, opts \\ []) do
+    actor = Keyword.get(opts, :actor)
+    org_id = Keyword.get(opts, :org_id) || (actor && Map.get(actor, :org_id))
+
     with {:ok, lamp} <- Genie.Lamp.LampRegistry.fetch_lamp(lamp_action.lamp_id) do
       Genie.Bridge.execute(%{
         lamp: lamp,
         endpoint_id: lamp_action.endpoint_id,
         params: lamp_action.params || %{},
-        session_id: lamp_action.session_id && to_string(lamp_action.session_id)
+        session_id: lamp_action.session_id && to_string(lamp_action.session_id),
+        actor: actor,
+        org_id: org_id
       })
     end
   end

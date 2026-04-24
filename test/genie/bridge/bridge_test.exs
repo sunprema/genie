@@ -201,4 +201,176 @@ defmodule Genie.BridgeTest do
       assert {:error, :undeclared_endpoint} = Bridge.fetch_options(lamp, field)
     end
   end
+
+  describe "execute/1 — inline runtime" do
+    defmodule InlineHandler do
+      @moduledoc false
+      def handle_endpoint("create_item", %{"fail" => true}, _ctx),
+        do: {:error, :simulated_failure}
+
+      def handle_endpoint("create_item", %{"boom" => true}, _ctx),
+        do: raise("kaboom")
+
+      def handle_endpoint("create_item", %{"missing_required" => true}, _ctx),
+        do: {:ok, %{"msg" => "no state"}}
+
+      def handle_endpoint("create_item", _params, ctx) do
+        send(self(), {:inline_called, ctx.lamp_id, ctx.endpoint_id, ctx.actor, ctx.org_id})
+        {:ok, %{"state" => "ready", "msg" => "created"}}
+      end
+
+      def handle_endpoint("load_regions", _params, _ctx) do
+        {:ok, [%{"code" => "us-east-1", "name" => "US East"}]}
+      end
+    end
+
+    defp build_inline_lamp(opts \\ []) do
+      endpoints =
+        Keyword.get(opts, :endpoints, [
+          %EndpointDef{
+            id: "create_item",
+            method: "POST",
+            path: "/items",
+            trigger: :"on-submit",
+            response_keys: [
+              %Genie.Lamp.ResponseKeyDef{name: "state", type: "string", required: true},
+              %Genie.Lamp.ResponseKeyDef{name: "msg", type: "string"}
+            ]
+          }
+        ])
+
+      %{
+        build_lamp(endpoints: endpoints)
+        | meta: %MetaDef{
+            title: "Inline Lamp",
+            runtime: "inline",
+            handler: "Genie.BridgeTest.InlineHandler"
+          }
+      }
+    end
+
+    test "routes to the handler module and returns rendered html" do
+      lamp = build_inline_lamp()
+
+      assert {:ok, html} =
+               Bridge.execute(%{
+                 lamp: lamp,
+                 endpoint_id: "create_item",
+                 params: %{"name" => "test"},
+                 session_id: "sess_inline"
+               })
+
+      assert is_binary(html)
+      assert html =~ "Item created successfully"
+    end
+
+    test "passes lamp_id, endpoint_id, actor, and org_id via Context" do
+      lamp = build_inline_lamp()
+      actor = %{id: "user-1", email: "a@b.com"}
+
+      assert {:ok, _html} =
+               Bridge.execute(%{
+                 lamp: lamp,
+                 endpoint_id: "create_item",
+                 params: %{},
+                 session_id: "sess_x",
+                 actor: actor,
+                 org_id: "org-99"
+               })
+
+      assert_received {:inline_called, "test.svc.create-item", "create_item", ^actor, "org-99"}
+    end
+
+    test "surfaces handler {:error, _} unchanged through sanitize_error" do
+      lamp = build_inline_lamp()
+
+      result =
+        Bridge.execute(%{
+          lamp: lamp,
+          endpoint_id: "create_item",
+          params: %{"fail" => true},
+          session_id: "sess_err"
+        })
+
+      assert {:error, _} = result
+    end
+
+    test "rescues handler crashes as {:handler_crash, msg}" do
+      lamp = build_inline_lamp()
+
+      result =
+        Bridge.execute(%{
+          lamp: lamp,
+          endpoint_id: "create_item",
+          params: %{"boom" => true},
+          session_id: "sess_boom"
+        })
+
+      assert {:error, {:handler_crash, msg}} = result
+      assert msg =~ "kaboom"
+    end
+
+    test "fails when response is missing a required response-schema key" do
+      lamp = build_inline_lamp()
+
+      assert {:error, {:missing_required_response_keys, ["state"]}} =
+               Bridge.execute(%{
+                 lamp: lamp,
+                 endpoint_id: "create_item",
+                 params: %{"missing_required" => true},
+                 session_id: "sess_missing"
+               })
+    end
+
+    test "errors when handler module cannot be resolved" do
+      lamp = build_inline_lamp()
+
+      lamp = %{
+        lamp
+        | meta: %{lamp.meta | handler: "Nonexistent.Module.That.Does.Not.Exist"}
+      }
+
+      assert {:error, _} =
+               Bridge.execute(%{
+                 lamp: lamp,
+                 endpoint_id: "create_item",
+                 params: %{},
+                 session_id: "s"
+               })
+    end
+  end
+
+  describe "fetch_options/2 — inline runtime" do
+    test "routes to handle_endpoint with empty params when handle_options/2 is undefined" do
+      endpoints = [
+        %EndpointDef{
+          id: "load_regions",
+          method: "GET",
+          path: "/regions",
+          trigger: :on_load
+        }
+      ]
+
+      lamp = %{
+        build_lamp(endpoints: endpoints)
+        | meta: %MetaDef{
+            title: "Inline Lamp",
+            runtime: "inline",
+            handler: "Genie.BridgeTest.InlineHandler"
+          }
+      }
+
+      field = %FieldDef{
+        id: "region",
+        type: :select,
+        aria_label: "Region",
+        options_from: "load_regions",
+        options_value_key: "code",
+        options_label_key: "name"
+      }
+
+      assert {:ok, pairs} = Bridge.fetch_options(lamp, field)
+      assert pairs == [{"us-east-1", "US East"}]
+    end
+  end
 end

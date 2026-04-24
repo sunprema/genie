@@ -30,7 +30,13 @@
       method="GET"
       path="/aws/ec2/instances"
       trigger="on-submit"
-      action-id="submit_list"/>
+      action-id="submit_list">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="instances" type="array"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
   </endpoints>
 
   <ui>

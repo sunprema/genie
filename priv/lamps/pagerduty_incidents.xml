@@ -23,7 +23,14 @@
       id="list_incidents"
       method="GET"
       path="/pagerduty/incidents"
-      trigger="webhook"/>
+      trigger="webhook">
+      <response-schema>
+        <key name="state" type="string"/>
+        <key name="incidents" type="array"/>
+        <key name="count" type="number"/>
+        <key name="error" type="string"/>
+      </response-schema>
+    </endpoint>
   </endpoints>
 
   <ui>

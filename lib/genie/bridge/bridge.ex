@@ -7,20 +7,22 @@ defmodule Genie.Bridge do
   require OpenTelemetry.Tracer, as: Tracer
 
   alias Genie.Bridge.VaultClient
-  alias Genie.Lamp.{FieldDef, LampDefinition, LampRenderer}
+  alias Genie.Lamp.{EndpointDef, FieldDef, LampDefinition, LampRenderer}
+  alias Genie.Lamp.Handler.Context
 
   @type request :: %{
           required(:lamp) => LampDefinition.t(),
           required(:endpoint_id) => String.t(),
           required(:params) => map(),
-          required(:session_id) => String.t()
+          required(:session_id) => String.t() | nil,
+          optional(:actor) => struct() | nil,
+          optional(:org_id) => String.t() | nil
         }
 
   @spec execute(request()) :: {:ok, String.t()} | {:error, term()}
-  def execute(%{lamp: lamp, endpoint_id: endpoint_id, params: params, session_id: session_id}) do
+  def execute(%{lamp: lamp, endpoint_id: endpoint_id, params: params} = req) do
     with {:ok, endpoint} <- find_endpoint(lamp, endpoint_id),
-         {:ok, token} <- VaultClient.get_scoped_token(lamp.meta.auth_scheme || "bearer"),
-         {:ok, response} <- call_endpoint(lamp, endpoint, params, token, session_id) do
+         {:ok, response} <- invoke_endpoint(lamp, endpoint, params, req) do
       html = render_status_html(lamp, response)
       {:ok, html}
     else
@@ -32,8 +34,7 @@ defmodule Genie.Bridge do
           {:ok, [{String.t(), String.t()}]} | {:error, term()}
   def fetch_options(%LampDefinition{} = lamp, %FieldDef{} = field) do
     with {:ok, endpoint} <- find_endpoint(lamp, field.options_from),
-         {:ok, token} <- VaultClient.get_scoped_token(lamp.meta.auth_scheme || "bearer"),
-         {:ok, items} <- get_options(lamp, endpoint, token) do
+         {:ok, items} <- fetch_options_items(lamp, endpoint) do
       value_key = field.options_value_key || "value"
       label_key = field.options_label_key || "label"
       pairs = Enum.map(items, fn item -> {Map.get(item, value_key), Map.get(item, label_key)} end)
@@ -42,15 +43,142 @@ defmodule Genie.Bridge do
   end
 
   @spec execute_tool(request()) :: {:ok, map()} | {:error, term()}
-  def execute_tool(%{lamp: lamp, endpoint_id: endpoint_id, params: params, session_id: session_id}) do
+  def execute_tool(%{lamp: lamp, endpoint_id: endpoint_id, params: params} = req) do
     with {:ok, endpoint} <- find_endpoint(lamp, endpoint_id),
-         {:ok, token} <- VaultClient.get_scoped_token(lamp.meta.auth_scheme || "bearer"),
-         {:ok, response} <- call_endpoint(lamp, endpoint, params, token, session_id) do
+         {:ok, response} <- invoke_endpoint(lamp, endpoint, params, req) do
       {:ok, response}
     else
       {:error, reason} -> {:error, sanitize_error(reason)}
     end
   end
+
+  # --- Dispatch: inline vs remote ---
+
+  defp invoke_endpoint(lamp, endpoint, params, req) do
+    if inline?(lamp) do
+      call_inline(lamp, endpoint, params, req)
+    else
+      session_id = Map.get(req, :session_id)
+
+      with {:ok, token} <- VaultClient.get_scoped_token(lamp.meta.auth_scheme || "bearer") do
+        call_endpoint(lamp, endpoint, params, token, session_id)
+      end
+    end
+  end
+
+  defp fetch_options_items(lamp, endpoint) do
+    if inline?(lamp) do
+      call_inline_options(lamp, endpoint)
+    else
+      with {:ok, token} <- VaultClient.get_scoped_token(lamp.meta.auth_scheme || "bearer") do
+        get_options(lamp, endpoint, token)
+      end
+    end
+  end
+
+  defp inline?(%LampDefinition{meta: %{runtime: "inline"}}), do: true
+  defp inline?(_), do: false
+
+  defp call_inline(lamp, endpoint, params, req) do
+    Tracer.with_span "Genie.bridge.inline",
+      attributes: [
+        {"lamp_id", lamp.id},
+        {"endpoint_id", endpoint.id},
+        {"runtime", "inline"}
+      ] do
+      started_at = System.monotonic_time(:millisecond)
+
+      with {:ok, handler} <- resolve_handler(lamp.meta.handler),
+           ctx <- build_context(lamp, endpoint, req, started_at),
+           {:ok, response} <- invoke_handler(handler, endpoint.id, params, ctx) do
+        Tracer.set_attributes([
+          {"duration_ms", System.monotonic_time(:millisecond) - started_at}
+        ])
+
+        case validate_response_shape(endpoint, response) do
+          :ok -> {:ok, response}
+          {:error, _} = err -> err
+        end
+      end
+    end
+  end
+
+  defp call_inline_options(lamp, endpoint) do
+    started_at = System.monotonic_time(:millisecond)
+
+    with {:ok, handler} <- resolve_handler(lamp.meta.handler),
+         ctx <- build_context(lamp, endpoint, %{}, started_at) do
+      cond do
+        function_exported?(handler, :handle_options, 2) ->
+          handler.handle_options(endpoint.id, ctx)
+
+        function_exported?(handler, :handle_endpoint, 3) ->
+          case handler.handle_endpoint(endpoint.id, %{}, ctx) do
+            {:ok, list} when is_list(list) -> {:ok, list}
+            {:ok, _other} -> {:error, :handler_expected_list_response}
+            err -> err
+          end
+
+        true ->
+          {:error, {:handler_missing_callback, lamp.meta.handler}}
+      end
+    end
+  end
+
+  defp invoke_handler(handler, endpoint_id, params, ctx) do
+    handler.handle_endpoint(endpoint_id, params, ctx)
+  rescue
+    e -> {:error, {:handler_crash, Exception.message(e)}}
+  end
+
+  defp resolve_handler(nil), do: {:error, :handler_not_declared}
+  defp resolve_handler(""), do: {:error, :handler_not_declared}
+
+  defp resolve_handler(name) when is_binary(name) do
+    module = Module.concat([name])
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :handle_endpoint, 3) do
+      {:ok, module}
+    else
+      {:error, {:handler_not_found, name}}
+    end
+  end
+
+  defp build_context(lamp, endpoint, req, started_at) do
+    %Context{
+      lamp_id: lamp.id,
+      endpoint_id: endpoint.id,
+      session_id: Map.get(req, :session_id),
+      trace_id: current_otel_trace_id(),
+      actor: Map.get(req, :actor),
+      org_id: Map.get(req, :org_id),
+      lamp: lamp,
+      endpoint: endpoint,
+      started_at: started_at,
+      metadata: Map.get(req, :metadata, %{})
+    }
+  end
+
+  defp validate_response_shape(%EndpointDef{response_keys: keys}, response)
+       when is_list(keys) and keys != [] and is_map(response) do
+    if Application.get_env(:genie, :inline_strict_responses, true) do
+      missing =
+        keys
+        |> Enum.filter(& &1.required)
+        |> Enum.reject(fn k -> Map.has_key?(response, k.name) end)
+        |> Enum.map(& &1.name)
+
+      if missing == [] do
+        :ok
+      else
+        {:error, {:missing_required_response_keys, missing}}
+      end
+    else
+      :ok
+    end
+  end
+
+  defp validate_response_shape(_endpoint, _response), do: :ok
 
   defp find_endpoint(%LampDefinition{endpoints: endpoints}, endpoint_id) do
     case Enum.find(endpoints || [], &(&1.id == endpoint_id)) do
@@ -202,6 +330,16 @@ defmodule Genie.Bridge do
   defp sanitize_error(:undeclared_endpoint), do: :undeclared_endpoint
 
   defp sanitize_error({:http_error, status}), do: {:http_error, status}
+
+  # Pass through inline-runtime errors verbatim so developers can diagnose
+  # handler-side issues (crashes, schema mismatches, resolution failures)
+  # without grepping the logs by trace_id.
+  defp sanitize_error({:handler_crash, _} = reason), do: reason
+  defp sanitize_error({:handler_not_found, _} = reason), do: reason
+  defp sanitize_error(:handler_not_declared), do: :handler_not_declared
+  defp sanitize_error({:handler_missing_callback, _} = reason), do: reason
+  defp sanitize_error({:missing_required_response_keys, _} = reason), do: reason
+  defp sanitize_error(:handler_expected_list_response), do: :handler_expected_list_response
 
   defp sanitize_error(_reason) do
     trace_id = current_otel_trace_id()

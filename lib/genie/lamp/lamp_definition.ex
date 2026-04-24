@@ -33,7 +33,9 @@ defmodule Genie.Lamp.MetaDef do
     :audit,
     :base_url,
     :auth_scheme,
-    :timeout_ms
+    :timeout_ms,
+    :runtime,
+    :handler
   ]
 end
 
@@ -97,6 +99,8 @@ end
 
 defmodule Genie.Lamp.EndpointDef do
   @moduledoc false
+  @type t :: %__MODULE__{}
+
   defstruct [
     :id,
     :method,
@@ -106,8 +110,14 @@ defmodule Genie.Lamp.EndpointDef do
     :action_id,
     :poll_interval_ms,
     :poll_until,
-    :timeout_ms
+    :timeout_ms,
+    response_keys: []
   ]
+end
+
+defmodule Genie.Lamp.ResponseKeyDef do
+  @moduledoc false
+  defstruct [:name, :type, :required]
 end
 
 defmodule Genie.Lamp.GroupDef do

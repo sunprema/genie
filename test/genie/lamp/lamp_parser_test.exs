@@ -464,10 +464,10 @@ defmodule Genie.Lamp.LampParserTest do
     end
   end
 
-  describe "warn-mode template placeholders" do
+  describe "template placeholders — warn mode (no response-schema)" do
     import ExUnit.CaptureLog
 
-    test "unknown placeholder logs a warning but parse succeeds" do
+    test "unknown placeholder logs a warning but parse succeeds when no response-schema declared" do
       xml = lamp_xml_with_template_value("Hello {mystery_key}!")
 
       log =
@@ -500,6 +500,188 @@ defmodule Genie.Lamp.LampParserTest do
 
       refute log =~ "error_message"
     end
+  end
+
+  describe "template placeholders — strict mode (with response-schema)" do
+    test "placeholder matching a declared response key passes" do
+      xml =
+        lamp_xml_with_schema(
+          ~s(<key name="result" type="string"/>),
+          "Hello {result}"
+        )
+
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+
+    test "unknown placeholder is a hard error once any response-schema is declared" do
+      xml =
+        lamp_xml_with_schema(
+          ~s(<key name="result" type="string"/>),
+          "Hello {mystery}"
+        )
+
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "unknown placeholder"
+      assert msg =~ "{mystery}"
+    end
+
+    test "form field placeholder still accepted in strict mode" do
+      xml =
+        lamp_xml_with_schema(
+          ~s(<key name="result" type="string"/>),
+          "Value is {test_field}"
+        )
+
+      assert {:ok, _} = LampParser.parse(xml)
+    end
+  end
+
+  describe "parsing — runtime and handler meta" do
+    test "runtime defaults to nil when not declared (treated as remote)" do
+      xml = lamp_xml(field([]))
+      assert {:ok, defn} = LampParser.parse(xml)
+      assert defn.meta.runtime in [nil, ""]
+      assert defn.meta.handler in [nil, ""]
+    end
+
+    test "runtime and handler meta elements are parsed" do
+      xml =
+        lamp_xml_with_meta_extras("""
+        <runtime>inline</runtime>
+        <handler>Genie.Lamps.Test.Handler</handler>
+        """)
+
+      assert {:ok, defn} = LampParser.parse(xml)
+      assert defn.meta.runtime == "inline"
+      assert defn.meta.handler == "Genie.Lamps.Test.Handler"
+    end
+  end
+
+  describe "parsing — response-schema and keys" do
+    test "response keys parsed in declaration order" do
+      xml =
+        lamp_xml_with_schema(
+          """
+          <key name="state" type="string" required="true"/>
+          <key name="items" type="array"/>
+          <key name="error_message" type="string"/>
+          """,
+          "OK"
+        )
+
+      {:ok, defn} = LampParser.parse(xml)
+      [endpoint] = defn.endpoints
+      assert Enum.map(endpoint.response_keys, & &1.name) == ["state", "items", "error_message"]
+      state_key = Enum.find(endpoint.response_keys, &(&1.name == "state"))
+      assert state_key.type == "string"
+      assert state_key.required == true
+      items_key = Enum.find(endpoint.response_keys, &(&1.name == "items"))
+      assert items_key.required in [nil, false]
+    end
+
+    test "endpoint without response-schema has empty response_keys" do
+      xml = lamp_xml(field([]))
+      {:ok, defn} = LampParser.parse(xml)
+      [endpoint] = defn.endpoints
+      assert endpoint.response_keys == []
+    end
+  end
+
+  describe "validation — runtime consistency" do
+    test "inline runtime without handler is an error" do
+      xml = lamp_xml_with_meta_extras("<runtime>inline</runtime>")
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "inline"
+      assert msg =~ "handler"
+    end
+
+    test "inline runtime with handler passes without base-url" do
+      xml =
+        lamp_xml_with_meta_extras(
+          """
+          <runtime>inline</runtime>
+          <handler>Genie.Lamps.Test.Handler</handler>
+          """,
+          base_url: nil
+        )
+
+      assert {:ok, defn} = LampParser.parse(xml)
+      assert defn.meta.runtime == "inline"
+    end
+
+    test "remote runtime without base-url is an error" do
+      xml = lamp_xml_with_meta_extras("<runtime>remote</runtime>", base_url: nil)
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "base-url"
+    end
+
+    test "default (no runtime tag) without base-url is an error" do
+      xml = lamp_xml_with_meta_extras("", base_url: nil)
+      assert {:error, msg} = LampParser.parse(xml)
+      assert msg =~ "base-url"
+    end
+  end
+
+  describe "serializer round-trip" do
+    alias Genie.Lamp.LampSerializer
+
+    test "runtime, handler, and response_keys survive round-trip" do
+      xml =
+        lamp_xml_full_schema(
+          """
+          <runtime>inline</runtime>
+          <handler>Genie.Lamps.Test.Handler</handler>
+          """,
+          """
+          <key name="state" type="string" required="true"/>
+          <key name="item_id" type="string"/>
+          """
+        )
+
+      {:ok, defn} = LampParser.parse(xml)
+      round_tripped =
+        defn
+        |> LampSerializer.to_map()
+        |> stringify_keys()
+        |> LampSerializer.from_map()
+
+      assert round_tripped.meta.runtime == "inline"
+      assert round_tripped.meta.handler == "Genie.Lamps.Test.Handler"
+      [endpoint] = round_tripped.endpoints
+      assert Enum.map(endpoint.response_keys, & &1.name) == ["state", "item_id"]
+    end
+
+    test "legacy map without response_keys key deserializes to []" do
+      legacy_endpoint_map = %{
+        "id" => "run",
+        "method" => "GET",
+        "path" => "/run",
+        "trigger" => "on_submit"
+      }
+
+      legacy_lamp_map = %{
+        "id" => "x.y.z",
+        "meta" => %{"title" => "T"},
+        "endpoints" => [legacy_endpoint_map],
+        "fields" => [],
+        "status_templates" => []
+      }
+
+      defn = LampSerializer.from_map(legacy_lamp_map)
+      [endpoint] = defn.endpoints
+      assert endpoint.response_keys == []
+      assert defn.meta.runtime == nil
+      assert defn.meta.handler == nil
+    end
+
+    defp stringify_keys(m) when is_map(m) and not is_struct(m) do
+      m
+      |> Enum.map(fn {k, v} -> {to_string(k), stringify_keys(v)} end)
+      |> Map.new()
+    end
+
+    defp stringify_keys(list) when is_list(list), do: Enum.map(list, &stringify_keys/1)
+    defp stringify_keys(other), do: other
   end
 
   # --- XML fixture builders ---
@@ -755,6 +937,89 @@ defmodule Genie.Lamp.LampParserTest do
       <status-templates>
         <template state="ready">
           <field type="banner" label="X" aria-label="X banner" style="info" value="#{value}"/>
+        </template>
+      </status-templates>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_with_schema(schema_keys, template_value) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.schema" version="1.0" category="compute" vendor="test">
+      <meta><title>T</title><base-url>https://x.com</base-url><auth-scheme>bearer</auth-scheme><requires-approval>false</requires-approval><destructive>false</destructive><audit>false</audit></meta>
+      <endpoints>
+        <endpoint id="run" method="POST" path="/run" trigger="on-submit" action-id="s">
+          <response-schema>
+            #{schema_keys}
+          </response-schema>
+        </endpoint>
+      </endpoints>
+      <ui><form aria-label="F">
+        <field id="test_field" type="text" aria-label="A field" genie-fill="none"/>
+      </form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="run" behavior="submit"/></actions>
+      <status-templates>
+        <template state="ready">
+          <field type="banner" label="X" aria-label="X banner" style="info" value="#{template_value}"/>
+        </template>
+      </status-templates>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_with_meta_extras(extras, opts \\ []) do
+    base_url = Keyword.get(opts, :base_url, "https://x.com")
+    base_url_tag = if base_url, do: "<base-url>#{base_url}</base-url>", else: ""
+
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.metaextras" version="1.0" category="compute" vendor="test">
+      <meta>
+        <title>T</title>
+        #{base_url_tag}
+        <auth-scheme>bearer</auth-scheme>
+        <requires-approval>false</requires-approval>
+        <destructive>false</destructive>
+        <audit>false</audit>
+        #{extras}
+      </meta>
+      <endpoints><endpoint id="run" method="POST" path="/run" trigger="on-submit" action-id="s"/></endpoints>
+      <ui><form aria-label="F"><field id="f" type="text" aria-label="A field" genie-fill="none"/></form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="run" behavior="submit"/></actions>
+      <status-templates>
+        <template state="ready">
+          <field type="banner" label="X" aria-label="X banner" style="info" value="OK"/>
+        </template>
+      </status-templates>
+    </lamp>
+    """
+  end
+
+  defp lamp_xml_full_schema(meta_extras, schema_keys) do
+    """
+    <?xml version="1.0" encoding="UTF-8"?>
+    <lamp id="test.lamp.fullschema" version="1.0" category="compute" vendor="test">
+      <meta>
+        <title>T</title>
+        <auth-scheme>bearer</auth-scheme>
+        <requires-approval>false</requires-approval>
+        <destructive>false</destructive>
+        <audit>false</audit>
+        #{meta_extras}
+      </meta>
+      <endpoints>
+        <endpoint id="run" method="POST" path="/run" trigger="on-submit" action-id="s">
+          <response-schema>
+            #{schema_keys}
+          </response-schema>
+        </endpoint>
+      </endpoints>
+      <ui><form aria-label="F"><field id="f" type="text" aria-label="A field" genie-fill="none"/></form></ui>
+      <actions><action id="s" label="S" aria-label="Submit" style="primary" endpoint-id="run" behavior="submit"/></actions>
+      <status-templates>
+        <template state="ready">
+          <field type="banner" label="X" aria-label="X banner" style="info" value="OK"/>
         </template>
       </status-templates>
     </lamp>

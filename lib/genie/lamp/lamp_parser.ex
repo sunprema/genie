@@ -11,10 +11,11 @@ defmodule Genie.Lamp.LampParser do
     LampDefinition,
     MetaDef,
     OptionDef,
+    ResponseKeyDef,
     StatusTemplate
   }
 
-  @meta_text_elements ~w(title icon tags requires-approval approval-policy destructive audit base-url auth-scheme timeout-ms)
+  @meta_text_elements ~w(title icon tags requires-approval approval-policy destructive audit base-url auth-scheme timeout-ms runtime handler)
 
   @spec parse(String.t()) :: {:ok, LampDefinition.t()} | {:error, String.t()}
   def parse(xml_string) when is_binary(xml_string) do
@@ -106,10 +107,26 @@ defmodule Genie.Lamp.LampParser do
       action_id: attr(attrs, "action-id"),
       poll_interval_ms: parse_int(attr(attrs, "poll-interval-ms")),
       poll_until: attr(attrs, "poll-until"),
-      timeout_ms: parse_int(attr(attrs, "timeout-ms"))
+      timeout_ms: parse_int(attr(attrs, "timeout-ms")),
+      response_keys: []
     }
 
     {:ok, %{state | stack: ["endpoint" | state.stack], current_endpoint: endpoint}}
+  end
+
+  def handle_event(:start_element, {"key", attrs}, state) when state.current_endpoint != nil do
+    key = %ResponseKeyDef{
+      name: attr(attrs, "name"),
+      type: attr(attrs, "type"),
+      required: parse_bool(attr(attrs, "required"))
+    }
+
+    endpoint = %{
+      state.current_endpoint
+      | response_keys: [key | state.current_endpoint.response_keys]
+    }
+
+    {:ok, %{state | stack: ["key" | state.stack], current_endpoint: endpoint}}
   end
 
   def handle_event(:start_element, {"field", attrs}, state) do
@@ -220,11 +237,16 @@ defmodule Genie.Lamp.LampParser do
   # --- End element handlers ---
 
   def handle_event(:end_element, "endpoint", state) do
+    endpoint = %{
+      state.current_endpoint
+      | response_keys: Enum.reverse(state.current_endpoint.response_keys || [])
+    }
+
     {:ok,
      %{
        state
        | stack: tl(state.stack),
-         endpoints: [state.current_endpoint | state.endpoints],
+         endpoints: [endpoint | state.endpoints],
          current_endpoint: nil
      }}
   end
@@ -389,9 +411,9 @@ defmodule Genie.Lamp.LampParser do
          :ok <- validate_path_param_refs(defn),
          :ok <- validate_state_names(defn),
          :ok <- validate_option_key_pair(defn),
-         :ok <- validate_primary_action(defn) do
-      warn_template_placeholders(defn)
-      :ok
+         :ok <- validate_runtime_consistency(defn),
+         :ok <- validate_template_placeholders(defn) do
+      validate_primary_action(defn)
     end
   end
 
@@ -621,40 +643,96 @@ defmodule Genie.Lamp.LampParser do
     end)
   end
 
-  # Warn-mode check for status-template placeholders. Phase 1 cannot verify
-  # response keys (no <response-schema> yet), so we only surface likely typos
-  # against form field ids plus a small conventional allowlist. Phase 2 graduates
-  # this to a hard error once endpoints declare response_keys.
+  # Conventional placeholder keys that are always accepted in status templates,
+  # independent of form fields and declared response schemas. These reflect
+  # universal UI concerns (lamp state dispatch, error rendering, count chip).
   @conventional_template_keys ~w(state error error_message count)
 
-  defp warn_template_placeholders(%{
-         id: lamp_id,
-         fields: fields,
-         status_templates: templates
-       }) do
-    field_ids = MapSet.new(fields, & &1.id)
-    allowed = MapSet.union(field_ids, MapSet.new(@conventional_template_keys))
+  # Strict check for status-template placeholders. Each {name} must resolve to
+  # one of: a form field id, a declared endpoint response_key, or a conventional
+  # key. Lamps that have not yet declared <response-schema> on any endpoint fall
+  # back to warn mode to preserve backward compatibility with legacy XMLs.
+  defp validate_template_placeholders(
+         %{fields: fields, endpoints: endpoints, status_templates: templates} = defn
+       ) do
+    response_keys =
+      endpoints
+      |> Enum.flat_map(&(&1.response_keys || []))
+      |> Enum.map(& &1.name)
+      |> MapSet.new()
 
-    for tmpl <- templates,
-        tf <- tmpl.fields,
-        text <- template_field_texts(tf),
-        placeholder <- path_params(text),
-        placeholder not in allowed do
-      require Logger
+    strict? = MapSet.size(response_keys) > 0
 
+    allowed =
+      fields
+      |> MapSet.new(& &1.id)
+      |> MapSet.union(MapSet.new(@conventional_template_keys))
+      |> MapSet.union(response_keys)
+
+    unknown =
+      for tmpl <- templates,
+          tf <- tmpl.fields,
+          text <- template_field_texts(tf),
+          placeholder <- path_params(text),
+          placeholder not in allowed,
+          do: {tmpl.state, placeholder}
+
+    cond do
+      unknown == [] ->
+        :ok
+
+      strict? ->
+        {state, placeholder} = hd(unknown)
+
+        {:error,
+         "status-template \"#{state}\" references unknown placeholder {#{placeholder}}. " <>
+           "Declare it as a <key> in some endpoint's <response-schema>, add a matching form field, or use a conventional key (#{Enum.join(@conventional_template_keys, ", ")})"}
+
+      true ->
+        warn_template_placeholders(defn.id, unknown)
+        :ok
+    end
+  end
+
+  defp warn_template_placeholders(lamp_id, unknown) do
+    require Logger
+
+    for {state, placeholder} <- unknown do
       Logger.warning(
-        "[lamp #{lamp_id}] status-template \"#{tmpl.state}\" references placeholder {#{placeholder}} " <>
-          "that is not a form field or conventional key. Declare a <response-schema> in Phase 2 to validate response keys."
+        "[lamp #{lamp_id}] status-template \"#{state}\" references placeholder {#{placeholder}} " <>
+          "that is not a form field or conventional key. Declare a <response-schema> on the producing endpoint to validate response keys."
       )
     end
-
-    :ok
   end
 
   defp template_field_texts(field) do
     [field.aria_label, field.label, field.value, field.href]
     |> Enum.reject(&is_nil/1)
   end
+
+  defp validate_runtime_consistency(%{meta: %{runtime: runtime} = meta}) do
+    case normalize_runtime(runtime) do
+      :inline ->
+        if meta.handler in [nil, ""] do
+          {:error, "lamp with <runtime>inline</runtime> requires a <handler> meta element naming the Elixir module"}
+        else
+          :ok
+        end
+
+      :remote ->
+        if meta.base_url in [nil, ""] do
+          {:error, "lamp with <runtime>remote</runtime> (or unset) requires a non-empty <base-url>"}
+        else
+          :ok
+        end
+    end
+  end
+
+  defp normalize_runtime(nil), do: :remote
+  defp normalize_runtime(""), do: :remote
+  defp normalize_runtime("remote"), do: :remote
+  defp normalize_runtime("inline"), do: :inline
+  defp normalize_runtime(_), do: :remote
 
   defp path_params(nil), do: []
 

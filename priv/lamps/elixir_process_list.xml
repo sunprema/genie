@@ -24,13 +24,27 @@
       method="GET"
       path="/elixir/processes"
       trigger="on-submit"
-      action-id="submit_list"/>
+      action-id="submit_list">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="processes" type="array"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
     <endpoint
       id="fetch_process"
       method="GET"
       path="/elixir/processes/{id}"
       trigger="on-submit"
-      action-id="submit_detail"/>
+      action-id="submit_detail">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="process" type="object"/>
+        <key name="pid" type="string"/>
+        <key name="registered_name" type="string"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
   </endpoints>
 
   <ui>

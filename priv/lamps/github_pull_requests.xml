@@ -24,13 +24,27 @@
       method="GET"
       path="/github/pulls"
       trigger="on-submit"
-      action-id="submit_list"/>
+      action-id="submit_list">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="pull_requests" type="array"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
     <endpoint
       id="fetch_pr_detail"
       method="GET"
       path="/github/pulls/{id}"
       trigger="on-submit"
-      action-id="submit_detail"/>
+      action-id="submit_detail">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="pull_request" type="object"/>
+        <key name="number" type="string"/>
+        <key name="title" type="string"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
   </endpoints>
 
   <ui>

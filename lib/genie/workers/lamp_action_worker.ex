@@ -105,7 +105,7 @@ defmodule Genie.Workers.LampActionWorker do
     if lamp.meta && lamp.meta.requires_approval && !demo_actor?(actor) do
       handle_approval_required(lamp, lamp_action, session_id)
     else
-      case Conductor.execute(lamp_action) do
+      case Conductor.execute(lamp_action, actor: actor) do
         {:ok, html} -> {:ok, lamp, html}
         error -> error
       end

@@ -32,7 +32,13 @@
       path="/aws/s3/buckets"
       trigger="on-submit"
       action-id="submit_create"
-      timeout-ms="30000"/>
+      timeout-ms="30000">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="bucket_name" type="string"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
     <endpoint
       id="poll_status"
       method="GET"
@@ -40,7 +46,15 @@
       trigger="on-complete"
       poll-interval-ms="2000"
       poll-until="status=ready|status=failed"
-      timeout-ms="60000"/>
+      timeout-ms="60000">
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="status" type="string" required="true"/>
+        <key name="bucket_name" type="string"/>
+        <key name="console_url" type="string"/>
+        <key name="error_message" type="string"/>
+      </response-schema>
+    </endpoint>
   </endpoints>
 
   <ui>

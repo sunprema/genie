@@ -9,6 +9,7 @@ defmodule Genie.Lamp.LampSerializer do
     LampDefinition,
     MetaDef,
     OptionDef,
+    ResponseKeyDef,
     StatusTemplate
   }
 
@@ -68,7 +69,9 @@ defmodule Genie.Lamp.LampSerializer do
       audit: m.audit,
       base_url: m.base_url,
       auth_scheme: m.auth_scheme,
-      timeout_ms: m.timeout_ms
+      timeout_ms: m.timeout_ms,
+      runtime: m.runtime,
+      handler: m.handler
     }
   end
 
@@ -142,8 +145,13 @@ defmodule Genie.Lamp.LampSerializer do
       action_id: e.action_id,
       poll_interval_ms: e.poll_interval_ms,
       poll_until: e.poll_until,
-      timeout_ms: e.timeout_ms
+      timeout_ms: e.timeout_ms,
+      response_keys: Enum.map(e.response_keys || [], &response_key_to_map/1)
     }
+  end
+
+  defp response_key_to_map(%ResponseKeyDef{} = k) do
+    %{name: k.name, type: k.type, required: k.required}
   end
 
   defp group_to_map(%GroupDef{} = g) do
@@ -168,7 +176,9 @@ defmodule Genie.Lamp.LampSerializer do
       audit: get(m, "audit"),
       base_url: get(m, "base_url"),
       auth_scheme: get(m, "auth_scheme"),
-      timeout_ms: get(m, "timeout_ms")
+      timeout_ms: get(m, "timeout_ms"),
+      runtime: get(m, "runtime"),
+      handler: get(m, "handler")
     }
   end
 
@@ -242,7 +252,16 @@ defmodule Genie.Lamp.LampSerializer do
       action_id: get(m, "action_id"),
       poll_interval_ms: get(m, "poll_interval_ms"),
       poll_until: get(m, "poll_until"),
-      timeout_ms: get(m, "timeout_ms")
+      timeout_ms: get(m, "timeout_ms"),
+      response_keys: Enum.map(get(m, "response_keys") || [], &response_key_from_map/1)
+    }
+  end
+
+  defp response_key_from_map(m) do
+    %ResponseKeyDef{
+      name: get(m, "name"),
+      type: get(m, "type"),
+      required: get(m, "required")
     }
   end
 
