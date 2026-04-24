@@ -72,17 +72,31 @@ genie/
 │   │   │   │   ├── lamp_parser.ex    # XML → %LampDefinition{}
 │   │   │   │   ├── lamp_renderer.ex  # %LampDefinition{} → Phoenix.HTML.safe
 │   │   │   │   ├── lamp_registry.ex  # Ash resource — registered lamps
-│   │   │   │   └── lamp_definition.ex # Structs: LampDefinition, FieldDef, ActionDef
+│   │   │   │   ├── lamp_definition.ex # Structs: LampDefinition, FieldDef, ResponseKeyDef, ...
+│   │   │   │   ├── lamp_serializer.ex # Struct ↔ JSON round-trip for registry storage
+│   │   │   │   ├── loader.ex         # Boot-time lamp registration + handler resolution
+│   │   │   │   ├── handler.ex        # Genie.Lamp.Handler behaviour + `use` macro
+│   │   │   │   └── handler/
+│   │   │   │       ├── context.ex    # %Context{} passed to every inline callback
+│   │   │   │       └── compiler.ex   # @before_compile check — @endpoint clauses vs XML
+│   │   │   ├── lamps/                # Inline handler modules (one file per lamp)
+│   │   │   │   ├── aws/
+│   │   │   │   │   ├── regions.ex          # Shared region catalog
+│   │   │   │   │   ├── ec2_list_instances.ex
+│   │   │   │   │   └── s3_create_bucket.ex
+│   │   │   │   ├── elixir/process_list.ex
+│   │   │   │   ├── github/pull_requests.ex
+│   │   │   │   └── pagerduty/incidents.ex
 │   │   │   ├── orchestrator/         # AI reasoning loop
 │   │   │   │   ├── reactor.ex        # Ash Reactor — ReasoningLoop
 │   │   │   │   └── steps/            # One module per Reactor step
 │   │   │   ├── conductor/            # Action validation and execution
 │   │   │   │   ├── lamp_action.ex    # Ash resource — the validated action
-│   │   │   │   └── conductor.ex      # build_action/3, execute/1
+│   │   │   │   └── conductor.ex      # build_action/3, execute/2
 │   │   │   ├── bridge/               # Application Bridge
-│   │   │   │   ├── app_bridge.ex     # execute/1, fetch_options/2
+│   │   │   │   ├── bridge.ex         # execute/1, fetch_options/2 — dispatches inline or remote
 │   │   │   │   ├── sanitizer.ex      # HTML sanitisation — strict allowlist
-│   │   │   │   └── vault_client.ex   # Scoped token retrieval
+│   │   │   │   └── vault_client.ex   # Scoped token retrieval (remote runtime only)
 │   │   │   ├── audit/                # Append-only audit log
 │   │   │   │   └── audit_log.ex      # Ash resource — immutable entries
 │   │   │   └── workers/              # Ash Oban workers
@@ -90,24 +104,31 @@ genie/
 │   │   │       ├── lamp_action_worker.ex
 │   │   │       └── approval_worker.ex
 │   │   └── priv/
-│   │       └── lamps/                # First-party lamp XML definitions
-│   │           ├── aws_ec2_list_instances.xml
-│   │           ├── aws_s3_create_bucket.xml
-│   │           ├── pagerduty_incidents.xml
-│   │           ├── github_pull_requests.xml
-│   │           └── kubernetes_restart_pods.xml
+│   │       ├── lamps/                # First-party lamp XML definitions
+│   │       │   ├── aws_ec2_list_instances.xml
+│   │       │   ├── aws_s3_create_bucket.xml
+│   │       │   ├── elixir_process_list.xml
+│   │       │   ├── github_pull_requests.xml
+│   │       │   └── pagerduty_incidents.xml
+│   │       └── lamp_templates/       # EEx templates used by mix genie.lamp.new
+│   │           └── inline_lamp.xml.eex
 │   │
-│   └── genie_web/                # Phoenix web layer
-│       ├── lib/genie_web/
-│       │   ├── live/
-│       │   │   ├── cockpit_live.ex   # Main LiveView
-│       │   │   └── components/       # Reusable LiveView components
-│       │   ├── controllers/          # Webhook ingestion endpoints
-│       │   └── router.ex
-│       └── assets/
-│           └── js/
-│               └── hooks/
-│                   └── canvas_hook.js  # 6-line JS hook — innerHTML only
+│   ├── genie_web/                # Phoenix web layer
+│   │   ├── lib/genie_web/
+│   │   │   ├── live/
+│   │   │   │   ├── cockpit_live.ex   # Main LiveView
+│   │   │   │   └── components/       # Reusable LiveView components
+│   │   │   ├── controllers/          # Webhook ingestion endpoints
+│   │   │   └── router.ex
+│   │   └── assets/
+│   │       └── js/
+│   │           └── hooks/
+│   │               └── canvas_hook.js  # 6-line JS hook — innerHTML only
+│   │
+│   └── mix/tasks/                # Developer tooling
+│       ├── genie.lamp.new.ex         # Scaffolds XML + handler + test for a new lamp
+│       ├── genie.lamp.verify.ex      # CI guard — parses all lamps + resolves handlers
+│       └── genie.lamps.load.ex       # Registers priv/lamps/*.xml into the registry
 ```
 
 ---
@@ -117,6 +138,11 @@ genie/
 ### 5.1 Full Schema Reference
 
 Every GenieLamp is defined by a single XML file. The schema is the contract between lamp developers and the platform. The Bridge validates all declared endpoints at registration. Any endpoint not declared in the XML is rejected by the Bridge — it cannot be called at runtime.
+
+A lamp picks one of two runtimes via `<meta><runtime>`:
+
+- `inline` (recommended for first-party lamps) — the lamp's endpoints are served by an Elixir module named in `<handler>`. No separate service, no credentials. The Bridge dispatches directly to `handler.handle_endpoint/3`.
+- `remote` (default if `<runtime>` is omitted) — the lamp's endpoints are HTTP URLs under `<base-url>`. The Bridge proxies to them over HTTPS with Vault-issued tokens.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -138,8 +164,12 @@ Every GenieLamp is defined by a single XML file. The schema is the contract betw
     <destructive>{true|false}</destructive>
     <audit>{true|false}</audit>
 
-    <!-- Communication -->
-    <base-url>{https://api.partner.com/genie}</base-url>
+    <!-- Runtime -->
+    <runtime>{inline|remote}</runtime>
+    <handler>{Genie.Lamps.Vendor.ServiceAction}</handler>  <!-- required when runtime=inline -->
+
+    <!-- Remote runtime only -->
+    <base-url>{https://api.partner.com/genie}</base-url>   <!-- required when runtime=remote -->
     <auth-scheme>{bearer|api-key|oauth2}</auth-scheme>
     <timeout-ms>{10000}</timeout-ms>
   </meta>
@@ -149,12 +179,20 @@ Every GenieLamp is defined by a single XML file. The schema is the contract betw
       id="{endpoint_id}"
       method="{GET|POST|PUT|PATCH|DELETE}"
       path="{/path/with/{param_interpolation}}"
-      trigger="{on-load|on-submit|on-complete|on-change}"
+      trigger="{on-load|on-submit|on-complete|on-change|webhook}"
       fills-field="{field_id}"
       action-id="{action_id}"
       poll-interval-ms="{2000}"
       poll-until="{status=ready|status=failed}"
-      timeout-ms="{60000}"/>
+      timeout-ms="{60000}">
+      <!-- Declares the shape of the response map. Required keys are enforced
+           at runtime (inline) or via Bridge response validation (remote).
+           Keys named here are accepted in status-template placeholders. -->
+      <response-schema>
+        <key name="state" type="string" required="true"/>
+        <key name="{custom_key}" type="{string|number|array|object|boolean}"/>
+      </response-schema>
+    </endpoint>
   </endpoints>
 
   <ui>
@@ -287,7 +325,9 @@ defmodule Genie.Lamp.MetaDef do
     :title, :description, :icon, :tags,
     :requires_approval, :approval_policy,
     :destructive, :audit,
-    :base_url, :auth_scheme, :timeout_ms
+    :runtime,       # "inline" | "remote" | nil (treated as remote)
+    :handler,       # Elixir module name string — required when runtime=inline
+    :base_url, :auth_scheme, :timeout_ms  # remote runtime only
   ]
 end
 
@@ -322,8 +362,13 @@ defmodule Genie.Lamp.EndpointDef do
   defstruct [
     :id, :method, :path, :trigger,
     :fills_field, :action_id,
-    :poll_interval_ms, :poll_until, :timeout_ms
+    :poll_interval_ms, :poll_until, :timeout_ms,
+    response_keys: []   # [%ResponseKeyDef{}] — declared response-schema
   ]
+end
+
+defmodule Genie.Lamp.ResponseKeyDef do
+  defstruct [:name, :type, :required]
 end
 
 defmodule Genie.Lamp.StatusTemplate do
@@ -370,6 +415,17 @@ defmodule Genie.Lamp.LampParser do
   # - aria-label present on every field, action, and status template field
   # - genie-fill value is one of: from-context | infer | none
   # - primary action exists if the form has any required fields
+  # - endpoint path params {x} resolve to a form field id, or to the synthetic
+  #   "id" param for endpoints referenced by a table's row-click-endpoint
+  # - status-template state names are slug-safe; at least one positive state
+  #   (ready, success, ready-*, success-*, or no_*) must be declared
+  # - options-value-key and options-label-key are set together (both or neither)
+  # - status-template {placeholder} values resolve to a form field id, a
+  #   declared <response-schema> key, or a conventional key (state,
+  #   error_message, error, count). Strict error when any endpoint declares
+  #   a <response-schema>; warn-mode otherwise (legacy XMLs).
+  # - runtime consistency: runtime=inline requires <handler>; runtime=remote
+  #   (or unset) requires <base-url>
 end
 ```
 
@@ -525,39 +581,92 @@ end
 ### 6.6 Application Bridge
 
 ```elixir
-# lib/genie/bridge/app_bridge.ex
-# The single secure entry point for all lamp backend communication.
-# The browser never calls a lamp backend directly.
+# lib/genie/bridge/bridge.ex
+# The single secure entry point for every lamp endpoint invocation. The browser
+# never calls a lamp backend directly, and the rest of the system never invokes
+# a handler module directly either — every call funnels through the Bridge so
+# authz, tracing, response-shape validation, and error sanitisation all run
+# exactly once per request.
 
 defmodule Genie.Bridge do
-  # execute/1 — called by LampActionWorker on form submit
-  # Validates the action against the declared endpoint list
-  # Retrieves scoped token from Vault
-  # Interpolates path params: /buckets/{bucket_name} -> /buckets/acme-prod-assets
-  # POSTs clean JSON (field values only) to lamp backend
-  # Receives JSON status response
-  # Renders matching status-template from LampDefinition
-  # Returns rendered HTML string
+  # execute/1, fetch_options/2, execute_tool/1 — all dispatch on lamp.meta.runtime:
+  #
+  # inline:
+  #   - Resolve handler module from lamp.meta.handler (Module.concat + Code.ensure_loaded?)
+  #   - Build %Genie.Lamp.Handler.Context{} with lamp_id, endpoint_id, session_id,
+  #     trace_id, actor, org_id, lamp, endpoint, started_at
+  #   - Call handler.handle_endpoint(endpoint_id, params, ctx)
+  #   - Rescue handler crashes as {:error, {:handler_crash, msg}}
+  #   - Validate response map against endpoint.response_keys (required keys only)
+  #     behind :genie, :inline_strict_responses (default true in dev/test)
+  #   - No HTTP, no Vault, no base_url
+  #
+  # remote:
+  #   - Retrieve scoped token from Vault (lamp.meta.auth_scheme)
+  #   - Interpolate path params: /buckets/{bucket_name} -> /buckets/acme-prod-assets
+  #   - POST/GET clean JSON (field values only) to lamp.meta.base_url + endpoint.path
+  #   - Receive JSON status response
+  #   - Request timeout enforced from endpoint.timeout_ms or lamp.meta.timeout_ms (default 10s)
+  #
+  # Both paths:
+  #   - Render matching status-template via LampRenderer.render_status/2
+  #   - Wrap in OTel span "Genie.bridge.inline" or "Genie.bridge.request"
+  #   - Known error tuples pass through sanitize_error/1 verbatim
+  #     ({:handler_crash, _}, {:missing_required_response_keys, _}, {:http_error, _}, ...)
+  #     Unknown errors collapse to {:service_unavailable, trace_id}.
 
-  # fetch_options/2 — called by FillUiStep for options-from fields
-  # GETs the options endpoint
-  # Maps response using options-value-key and options-label-key
-  # Returns [{value, label}]
+  # Test / dev handler swap:
+  #   config :genie, :lamp_handler_overrides, %{"Real.Module" => "Test.Stub"}
+  # lets tests inject deterministic inline handlers without ripping up Req stubs.
 
-  # execute_tool/1 — called by ToolExecutionLoopStep
-  # Executes a Tool call (data-gathering, not action)
-  # Returns JSON result for LLM context
-
-  # Security invariants (must all hold):
+  # Security invariants (must all hold, both runtimes):
   # 1. Only endpoints declared in the lamp's XML manifest can be called
-  # 2. All outbound requests include X-Genie-Trace-Id for correlation
-  # 3. All HTML responses are sanitised before entering the Cockpit
-  # 4. Credentials are injected by the Bridge — lamp backends never receive raw keys
-  # 5. Request timeout enforced from lamp meta timeout-ms (default 10s)
+  # 2. All outbound HTTP requests (remote) include X-Genie-Trace-Id for correlation
+  # 3. All HTML from remote backends is sanitised before entering the Cockpit
+  # 4. Remote credentials are injected by the Bridge — backends never receive raw keys
+  # 5. Inline handlers run in-process; they are subject to Ash policy checks
+  #    performed earlier in the Conductor before the Bridge is called
+end
+
+defmodule Genie.Lamp.Handler do
+  # Behaviour implemented by every inline lamp.
+  #
+  #   use Genie.Lamp.Handler, lamp_id: "aws.s3.create-bucket"
+  #
+  #   @endpoint "create_bucket"
+  #   def handle_endpoint("create_bucket", params, ctx), do: {:ok, %{"state" => "submitting"}}
+  #
+  # Callbacks:
+  #   handle_endpoint(endpoint_id, params, %Context{}) :: {:ok, map()} | {:error, term()}
+  #   handle_options(endpoint_id, %Context{}) :: {:ok, [map()]} | {:error, term()}  (optional)
+  #
+  # Compile-time contract:
+  #   The @before_compile hook (Genie.Lamp.Handler.Compiler) reads the lamp's
+  #   XML at compile time and compares the handler's @endpoint attributes
+  #   against the declared endpoint ids. Missing or extra @endpoint clauses
+  #   emit IO.warn/2 — promoted to compile error under --warnings-as-errors.
+  #
+  # Boot-time resolution:
+  #   Genie.Lamp.Loader.load_all/0 calls Code.ensure_loaded?/1 on every inline
+  #   lamp's declared handler module so missing modules surface at boot, not
+  #   at first request.
+end
+
+defmodule Genie.Lamp.Handler.Context do
+  # Passed to every inline callback. Carries everything an HTTP backend would
+  # get via headers (session_id, trace_id) plus the already-resolved actor,
+  # org_id, and lamp/endpoint structs so handlers don't re-lookup definitions.
+  defstruct [
+    :lamp_id, :endpoint_id, :session_id, :trace_id,
+    :actor, :org_id, :lamp, :endpoint, :started_at,
+    metadata: %{}
+  ]
 end
 
 defmodule Genie.Bridge.Sanitizer do
-  # Strict HTML allowlist for lamp backend responses
+  # Strict HTML allowlist for REMOTE lamp backend responses. Inline handlers
+  # return structured maps that the renderer emits via Phoenix.HTML directly,
+  # so sanitisation only applies to remote-path responses.
   # Allowed elements: div, span, p, strong, em, ul, ol, li, table,
   #   thead, tbody, tr, th, td, a (href only, no javascript:), code, pre
   # Allowed attributes: class, id, aria-*, role, data-lamp-* (own namespace only)
@@ -655,9 +764,11 @@ export default CanvasHook;
 
 ## 7. GenieLamp Communication Protocol
 
-### 7.1 What the Lamp Backend Receives
+A lamp's endpoints are invoked via one of two paths, chosen by `<meta><runtime>`. Both paths share the same response contract: a map whose keys match the endpoint's declared `<response-schema>`, with a `state` that maps to a `<status-template>`.
 
-On form submit the Bridge POSTs clean JSON — field values keyed by field ID. The backend never sees XML, HTML, ARIA attributes, or any Cockpit internals.
+### 7.1 Remote Runtime — HTTP
+
+For lamps with `runtime=remote` (or no runtime declared), the Bridge POSTs clean JSON — field values keyed by field ID. The backend never sees XML, HTML, ARIA attributes, or any Cockpit internals.
 
 ```json
 POST https://api.partner.com/genie/aws/s3/buckets
@@ -678,8 +789,6 @@ Content-Type: application/json
 }
 ```
 
-### 7.2 What the Lamp Backend Returns
-
 The backend returns a JSON object matching a declared `state` in the lamp's `<status-templates>`. The Cockpit renders the matching template with values interpolated. The lamp provider never writes HTML.
 
 ```json
@@ -691,14 +800,43 @@ The backend returns a JSON object matching a declared `state` in the lamp's `<st
 }
 ```
 
+### 7.2 Inline Runtime — Elixir Handler
+
+For lamps with `runtime=inline`, the Bridge dispatches directly to the Elixir module named in `<handler>`. The module implements the `Genie.Lamp.Handler` behaviour: one `handle_endpoint/3` clause per declared endpoint, each tagged with a preceding `@endpoint "<endpoint_id>"` attribute for compile-time coverage checking.
+
+```elixir
+defmodule Genie.Lamps.AWS.S3CreateBucket do
+  use Genie.Lamp.Handler, lamp_id: "aws.s3.create-bucket"
+
+  @endpoint "create_bucket"
+  def handle_endpoint("create_bucket", params, ctx) do
+    # ctx.actor, ctx.org_id, ctx.trace_id, ctx.session_id all available
+    {:ok,
+     %{
+       "state" => "submitting",
+       "bucket_name" => params["bucket_name"],
+       "region" => params["region"]
+     }}
+  end
+
+  @endpoint "poll_status"
+  def handle_endpoint("poll_status", %{"bucket_name" => name}, _ctx) do
+    {:ok, %{"state" => "ready", "status" => "ready", "bucket_name" => name, "console_url" => ...}}
+  end
+end
+```
+
+The response map has the same contract as the remote JSON body: keys must match the endpoint's `<response-schema>` (required keys enforced), and `state` must match a `<status-template>`. The handler never renders HTML.
+
 ### 7.3 Endpoint Declaration Enforcement
 
-The Bridge maintains a compiled map of `{lamp_id, endpoint_id} -> %EndpointDef{}` loaded from the registry at startup. On every request:
+Both runtimes enforce the same manifest-based gate. On every request:
 
 1. Verify `lamp_id` is registered and enabled for the actor's org
 2. Verify `endpoint_id` exists in that lamp's declared endpoints
-3. Verify HTTP method matches the declaration
-4. Reject with `403` if any check fails — log with trace ID
+3. **Remote:** verify HTTP method matches the declaration
+4. **Inline:** verify the handler module is loaded and implements `handle_endpoint/3`
+5. Reject with an error (403 remote / `:handler_not_found` inline) if any check fails — log with trace ID
 
 ---
 

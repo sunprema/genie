@@ -9,6 +9,19 @@ Lamp XML files live in `priv/lamps/<vendor>_<service>_<action>.xml`.
 They are parsed by `LampParser` (SAX) into `LampDefinition` structs and validated at parse time.
 Any validation failure returns `{:error, reason}` — the lamp will not load.
 
+A lamp is **two files** — an XML definition (this skill) plus an Elixir handler
+module at `lib/genie/lamps/<vendor>/<service>_<action>.ex` that serves each
+declared endpoint in-process. Use `mix genie.lamp.new vendor.service.action` to
+scaffold both. For the handler side, see
+`references/docs/LAMP_DEVELOPMENT.md`.
+
+**Runtime choice (in `<meta>`):**
+
+- `inline` (recommended for first-party lamps) — an Elixir module serves the
+  endpoints. No HTTP backend, no credentials.
+- `remote` (default if `<runtime>` is omitted) — endpoints are HTTP URLs under
+  `<base-url>`; the Bridge proxies to them with Vault-issued tokens.
+
 ---
 
 ## Skeleton
@@ -36,6 +49,8 @@ Any validation failure returns `{:error, reason}` — the lamp will not load.
 
 ## `<meta>`
 
+### Inline runtime (recommended)
+
 ```xml
 <meta>
   <title>Human-readable title</title>
@@ -50,15 +65,31 @@ Any validation failure returns `{:error, reason}` — the lamp will not load.
   <destructive>false</destructive>
   <audit>true</audit>
 
-  <base-url>http://localhost:4000/genie</base-url>
-  <auth-scheme>bearer</auth-scheme>
-  <timeout-ms>15000</timeout-ms>
+  <runtime>inline</runtime>
+  <handler>Genie.Lamps.AWS.EC2ListInstances</handler>
+
+  <timeout-ms>10000</timeout-ms>
+</meta>
+```
+
+### Remote runtime (HTTP backend)
+
+```xml
+<meta>
+  <!-- …same fields as above, except: -->
+  <runtime>remote</runtime>
+  <base-url>https://api.partner.com/genie</base-url>
+  <auth-scheme>bearer</auth-scheme>   <!-- bearer | api-key -->
+  <timeout-ms>10000</timeout-ms>
 </meta>
 ```
 
 - `audit` should be `true` for all lamps
 - `destructive` should be `true` only if the action mutates/deletes real infrastructure
 - `requires-approval` + `approval-policy` go together; omit `approval-policy` when `requires-approval` is false
+- **`runtime=inline` requires `<handler>`** — a fully-qualified Elixir module
+  name. `<base-url>` and `<auth-scheme>` are unused (omit them).
+- **`runtime=remote` (or omitted) requires `<base-url>`** — `<handler>` is unused.
 
 ---
 
@@ -81,7 +112,13 @@ Any validation failure returns `{:error, reason}` — the lamp will not load.
     path="/service/things"
     trigger="on-submit"
     action-id="submit_create"
-    timeout-ms="30000"/>
+    timeout-ms="30000">
+    <response-schema>
+      <key name="state" type="string" required="true"/>
+      <key name="thing_id" type="string"/>
+      <key name="error_message" type="string"/>
+    </response-schema>
+  </endpoint>
 
   <!-- Polls after submission until condition met -->
   <endpoint
@@ -91,14 +128,27 @@ Any validation failure returns `{:error, reason}` — the lamp will not load.
     trigger="on-complete"
     poll-interval-ms="2000"
     poll-until="status=ready|status=failed"
-    timeout-ms="60000"/>
+    timeout-ms="60000">
+    <response-schema>
+      <key name="state" type="string" required="true"/>
+      <key name="status" type="string" required="true"/>
+      <key name="thing_id" type="string"/>
+      <key name="console_url" type="string"/>
+    </response-schema>
+  </endpoint>
 
   <!-- Webhook-driven — no user action needed -->
   <endpoint
     id="list_incidents"
     method="GET"
     path="/pagerduty/incidents"
-    trigger="webhook"/>
+    trigger="webhook">
+    <response-schema>
+      <key name="state" type="string"/>
+      <key name="incidents" type="array"/>
+      <key name="count" type="number"/>
+    </response-schema>
+  </endpoint>
 </endpoints>
 ```
 
@@ -106,9 +156,27 @@ Any validation failure returns `{:error, reason}` — the lamp will not load.
 
 - `fills-field` — only for `on-load` endpoints; names the `select` field whose options come from the response
 - `action-id` — required when `trigger="on-submit"`; must match an `<action id="…">`
-- Path params like `{thing_id}` are interpolated from the submitted form values at runtime
+- Path params like `{thing_id}` must resolve to a form field id. For
+  `row-click` table endpoints the synthetic `{id}` param is also accepted
+  (it's populated from the clicked row's `row-id-key`).
 
 **Critical:** Every endpoint used by an action or `options-from` must be declared here. Undeclared endpoints are rejected.
+
+### `<response-schema>` — declare what the endpoint returns
+
+Each endpoint should declare the shape of its response via child `<key>` elements.
+
+- **Inline runtime** — the Bridge enforces all `required="true"` keys on the
+  map your handler returns. Missing required keys surface as
+  `{:error, {:missing_required_response_keys, [...]}}`.
+- **Both runtimes** — any `<key>` name becomes a valid `{placeholder}` in
+  status-template `aria-label`/`value`/`href`. Once any endpoint declares a
+  `<response-schema>`, the parser runs strict placeholder validation across
+  *all* status templates and rejects unknown placeholders at load time.
+- `type` is documentary: `string | number | boolean | array | object`.
+- `state`, `error_message`, `error`, and `count` are always accepted as
+  placeholders without needing to be declared (conventional keys), but
+  declaring them in the schema is still good practice.
 
 ---
 
@@ -371,16 +439,62 @@ The parser runs these checks and returns `{:error, reason}` on failure:
 - [ ] Every `<field>` in every `<template>` has `aria-label`
 - [ ] `genie-fill` is one of `from-context`, `infer`, `none` (or absent)
 - [ ] If any field is `required="true"`, at least one action has `style="primary"`
+- [ ] Every endpoint `path` `{param}` resolves to a form field id (or `id` for
+      row-click endpoints)
+- [ ] Every status-template `{placeholder}` resolves to a form field id, a
+      declared `<response-schema>` key, or a conventional key (`state`,
+      `error_message`, `error`, `count`) — strict when any endpoint declares
+      `<response-schema>`; warn otherwise
+- [ ] Status-template state names are slug-safe (`[a-z0-9][a-z0-9_-]*`) and at
+      least one positive state exists (`ready`, `success`, `ready-*`, or `no_*`)
+- [ ] `options-value-key` and `options-label-key` are set together (both or neither)
+- [ ] `runtime=inline` declares `<handler>`; `runtime=remote` (or unset)
+      declares `<base-url>`
+
+---
+
+## Companion handler (inline lamps)
+
+Every `runtime=inline` lamp has a paired Elixir module at
+`lib/genie/lamps/<vendor>/<service>_<action>.ex` that implements the
+`Genie.Lamp.Handler` behaviour. The `@before_compile` hook reads this XML
+at compile time and diffs the XML's endpoint ids against the handler's
+`@endpoint` attributes — missing or extra clauses emit `IO.warn/2`
+(promoted to a compile error under `--warnings-as-errors`).
+
+Skeleton — one `@endpoint`-tagged clause per declared endpoint:
+
+```elixir
+defmodule Genie.Lamps.AWS.EC2ListInstances do
+  use Genie.Lamp.Handler, lamp_id: "aws.ec2.list-instances"
+
+  @endpoint "load_regions"
+  def handle_endpoint("load_regions", _params, _ctx),
+    do: {:ok, [%{"code" => "us-east-1", "name" => "US East"}]}
+
+  @endpoint "list_instances"
+  def handle_endpoint("list_instances", params, _ctx),
+    do: {:ok, %{"state" => "ready", "region" => params["region"], "instances" => [...]}}
+end
+```
+
+`mix genie.lamp.new <vendor>.<service>.<action>` scaffolds both files together.
+For the full handler contract (Context struct, response-shape enforcement,
+testing patterns), see `references/docs/LAMP_DEVELOPMENT.md`.
 
 ---
 
 ## Examples
 
-Four reference lamps are in `priv/lamps/`:
+Five reference lamps ship in `priv/lamps/`:
 
 | File                         | Pattern illustrated                                                                 |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
 | `aws_ec2_list_instances.xml` | `on-load` endpoint populates a select, `on-submit` list action, table result        |
 | `aws_s3_create_bucket.xml`   | Requires-approval, collapsible group, `depends-on`, polling, multiple status states |
+| `elixir_process_list.xml`    | Introspection-only lamp, `ready-list` + `ready-detail` states, detail-panel         |
 | `github_pull_requests.xml`   | Two submit actions, `ready-list` + `ready-detail` states, `row-click` table         |
 | `pagerduty_incidents.xml`    | Webhook-driven, no user action, hidden field                                        |
+
+All five are `runtime=inline` — their handler modules live under
+`lib/genie/lamps/<vendor>/`.
